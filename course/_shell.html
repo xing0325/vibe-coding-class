@@ -1,0 +1,441 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-theme="dark">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Git &amp; GitHub 大串讲 · 互动课程</title>
+<style>
+  :root {
+    --course-accent: #2f81f7;
+    --course-accent-soft: rgba(47, 129, 247, 0.15);
+    --c-bg: #0d1117;
+    --c-bg-card: #161b22;
+    --c-bg-soft: #21262d;
+    --c-fg: #e6edf3;
+    --c-fg-muted: #7d8590;
+    --c-border: #30363d;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; padding: 0;
+    background: var(--c-bg);
+    color: var(--c-fg);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans", "PingFang SC", "Microsoft YaHei", Helvetica, Arial, sans-serif;
+    height: 100%;
+  }
+  body { min-height: 100vh; overflow-x: hidden; }
+  code, .deck-code, .deck-kbd { font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace; }
+
+  /* ============ 顶部进度条 ============ */
+  #course-progress {
+    position: fixed; top: 0; left: 0; right: 0; height: 4px;
+    background: rgba(255,255,255,0.06); z-index: 100;
+  }
+  #course-progress > div {
+    height: 100%; width: 0;
+    background: linear-gradient(90deg, var(--course-accent), #3fb950);
+    transition: width 0.35s ease;
+  }
+
+  /* ============ 封面 / 大纲 ============ */
+  #course-home {
+    max-width: 1100px; margin: 0 auto; padding: 64px 24px 80px;
+  }
+  .home-hero { text-align: center; margin-bottom: 56px; }
+  .home-hero .badge {
+    display: inline-block; padding: 5px 14px; border-radius: 999px;
+    background: var(--course-accent-soft); color: var(--course-accent);
+    font-size: 13px; font-weight: 600; letter-spacing: 0.04em; margin-bottom: 20px;
+  }
+  .home-hero h1 {
+    font-size: clamp(34px, 6vw, 64px); margin: 0 0 16px;
+    background: linear-gradient(120deg, #a371f7, #2f81f7, #39c5cf, #3fb950);
+    -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;
+    font-weight: 800; letter-spacing: -0.01em;
+  }
+  .home-hero p { font-size: 18px; color: var(--c-fg-muted); margin: 0 auto; max-width: 640px; line-height: 1.7; }
+
+  .chapter-grid {
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 18px;
+  }
+  .chapter-card {
+    position: relative; overflow: hidden;
+    background: var(--c-bg-card); border: 1px solid var(--c-border);
+    border-radius: 14px; padding: 22px 22px 22px 26px; cursor: pointer;
+    transition: transform 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease;
+    text-align: left;
+  }
+  .chapter-card::before {
+    content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 5px;
+    background: var(--cc, #2f81f7);
+  }
+  .chapter-card:hover { transform: translateY(-4px); border-color: var(--cc, #2f81f7); box-shadow: 0 12px 32px rgba(0,0,0,0.45); }
+  .chapter-card .cc-top { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
+  .chapter-card .cc-emoji { font-size: 30px; line-height: 1; }
+  .chapter-card .cc-num {
+    font-size: 12px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase;
+    color: var(--cc, #2f81f7); background: color-mix(in srgb, var(--cc, #2f81f7) 15%, transparent);
+    padding: 3px 9px; border-radius: 999px; margin-left: auto;
+  }
+  .chapter-card h3 { margin: 0 0 6px; font-size: 19px; }
+  .chapter-card p { margin: 0; color: var(--c-fg-muted); font-size: 14px; line-height: 1.6; }
+  .chapter-card .cc-done { color: #3fb950; font-size: 12px; margin-top: 10px; font-weight: 600; }
+
+  .practice-card {
+    grid-column: 1 / -1;
+    background: linear-gradient(135deg, rgba(46,160,67,0.16), rgba(47,129,247,0.12));
+    border: 1px solid #2ea043;
+  }
+  .practice-card::before { background: #2ea043; }
+  .practice-card:hover { border-color: #3fb950; }
+
+  /* ============ Deck 视图 ============ */
+  #course-deck { display: none; flex-direction: column; min-height: 100vh; }
+  #course-deck.active { display: flex; }
+  .deck-topbar {
+    display: flex; align-items: center; gap: 16px;
+    padding: 16px 28px; border-bottom: 1px solid var(--c-border);
+    position: sticky; top: 0; background: rgba(13,17,23,0.85); backdrop-filter: blur(10px); z-index: 50;
+  }
+  .deck-topbar .dt-back {
+    display: inline-flex; align-items: center; gap: 6px;
+    background: var(--c-bg-soft); border: 1px solid var(--c-border); color: var(--c-fg);
+    padding: 7px 13px; border-radius: 8px; cursor: pointer; font-size: 13px;
+  }
+  .deck-topbar .dt-back:hover { border-color: var(--course-accent); }
+  .deck-topbar .dt-title { font-weight: 700; font-size: 16px; display: flex; align-items: center; gap: 8px; }
+  .deck-topbar .dt-title .dt-emoji { font-size: 20px; }
+  .deck-topbar .dt-chip {
+    font-size: 12px; color: var(--course-accent);
+    background: var(--course-accent-soft); padding: 3px 10px; border-radius: 999px; font-weight: 600;
+  }
+  .deck-topbar .dt-count { margin-left: auto; color: var(--c-fg-muted); font-size: 13px; font-variant-numeric: tabular-nums; }
+
+  .deck-stage-wrap { flex: 1; display: flex; align-items: stretch; justify-content: center; padding: 32px 24px; }
+  .deck-stage {
+    width: 100%; max-width: 980px; margin: 0 auto;
+    animation: deck-fade 0.32s ease;
+  }
+  @keyframes deck-fade { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+
+  .deck-nav {
+    display: flex; align-items: center; justify-content: space-between; gap: 16px;
+    padding: 16px 28px 28px; max-width: 980px; margin: 0 auto; width: 100%;
+  }
+  .deck-dots { display: flex; gap: 7px; flex-wrap: wrap; justify-content: center; flex: 1; }
+  .deck-dot { width: 9px; height: 9px; border-radius: 50%; background: var(--c-bg-soft); border: 1px solid var(--c-border); cursor: pointer; transition: all 0.18s; }
+  .deck-dot.active { background: var(--course-accent); border-color: var(--course-accent); transform: scale(1.25); }
+  .deck-dot.seen { background: color-mix(in srgb, var(--course-accent) 45%, transparent); }
+
+  .deck-navbtn {
+    display: inline-flex; align-items: center; gap: 7px;
+    padding: 11px 20px; border-radius: 10px; cursor: pointer; font-size: 15px; font-weight: 600;
+    border: 1px solid var(--c-border); background: var(--c-bg-soft); color: var(--c-fg);
+    transition: all 0.16s;
+  }
+  .deck-navbtn.primary { background: var(--course-accent); border-color: var(--course-accent); color: #fff; }
+  .deck-navbtn.primary:hover { filter: brightness(1.1); }
+  .deck-navbtn:disabled { opacity: 0.35; cursor: not-allowed; }
+  .deck-navbtn:not(:disabled):hover { border-color: var(--course-accent); }
+
+  .deck-hint-key {
+    text-align: center; color: var(--c-fg-muted); font-size: 12px; padding-bottom: 18px;
+  }
+  .deck-hint-key kbd {
+    background: var(--c-bg-soft); border: 1px solid var(--c-border); border-radius: 5px;
+    padding: 1px 7px; font-size: 11px; margin: 0 2px;
+  }
+
+  /* ============ 章节内容通用 class（供章节模块使用）============ */
+  .deck-h1 { font-size: clamp(26px, 4vw, 40px); font-weight: 800; margin: 0 0 18px; letter-spacing: -0.01em; }
+  .deck-h2 { font-size: clamp(20px, 3vw, 27px); font-weight: 700; margin: 0 0 14px; }
+  .deck-lead { font-size: 19px; color: var(--c-fg); line-height: 1.75; margin: 0 0 18px; }
+  .deck-p { font-size: 16px; color: var(--c-fg-muted); line-height: 1.8; margin: 0 0 14px; }
+  .deck-p strong, .deck-lead strong { color: var(--c-fg); }
+  .deck-callout {
+    border-left: 4px solid var(--course-accent);
+    background: var(--course-accent-soft);
+    padding: 14px 18px; border-radius: 0 10px 10px 0; margin: 16px 0; line-height: 1.7;
+  }
+  .deck-callout.warn { border-left-color: #d29922; background: rgba(210,153,34,0.13); }
+  .deck-code {
+    background: #010409; border: 1px solid var(--c-border); border-radius: 10px;
+    padding: 14px 18px; font-size: 14px; line-height: 1.7; overflow-x: auto;
+    color: #e6edf3; white-space: pre; margin: 14px 0;
+  }
+  .deck-kbd {
+    background: var(--c-bg-soft); border: 1px solid var(--c-border); border-radius: 6px;
+    padding: 2px 8px; font-size: 13px; color: var(--course-accent);
+  }
+  .deck-btn {
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 11px 20px; border-radius: 10px; cursor: pointer; font-size: 15px; font-weight: 600;
+    background: var(--course-accent); color: #fff; border: 1px solid var(--course-accent);
+    text-decoration: none; transition: all 0.16s;
+  }
+  .deck-btn:hover { filter: brightness(1.12); transform: translateY(-2px); }
+  .deck-btn.ghost { background: var(--c-bg-soft); color: var(--c-fg); border-color: var(--c-border); }
+  .deck-btn.ghost:hover { border-color: var(--course-accent); }
+  .deck-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; margin: 16px 0; }
+  .deck-card {
+    background: var(--c-bg-card); border: 1px solid var(--c-border);
+    border-radius: 12px; padding: 18px; line-height: 1.7;
+  }
+  .deck-card h4 { margin: 0 0 8px; font-size: 16px; }
+  .deck-center { display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; min-height: 60vh; }
+  .deck-stage svg { max-width: 100%; height: auto; }
+  .deck-stage svg text { font-family: -apple-system, "Segoe UI", "PingFang SC", sans-serif; }
+
+  /* 加载占位 */
+  #course-loading { text-align: center; padding: 120px 24px; color: var(--c-fg-muted); }
+</style>
+</head>
+<body>
+  <div id="course-progress"><div></div></div>
+
+  <!-- 封面 / 大纲 -->
+  <div id="course-home">
+    <div class="home-hero">
+      <span class="badge">VIBE CODER 友好 · 互动翻页课程</span>
+      <h1>Git &amp; GitHub 大串讲</h1>
+      <p>从「版本控制是什么」到「多人协作怎么玩」，用树状图、动画和亲手互动把 Git 的设计之美讲透。你不用背命令——AI 时代，记住效果就够了。</p>
+    </div>
+    <div class="chapter-grid" id="chapter-grid">
+      <div id="course-loading">章节加载中…（如果一直显示这行，说明章节模块没注册成功）</div>
+    </div>
+  </div>
+
+  <!-- Deck 视图 -->
+  <div id="course-deck">
+    <div class="deck-topbar">
+      <button class="dt-back" id="deck-back">← 课程大纲</button>
+      <span class="dt-title"><span class="dt-emoji" id="deck-emoji"></span><span id="deck-title"></span></span>
+      <span class="dt-chip" id="deck-chip"></span>
+      <span class="dt-count" id="deck-count"></span>
+    </div>
+    <div class="deck-stage-wrap">
+      <div class="deck-stage" id="deck-stage"></div>
+    </div>
+    <div class="deck-nav">
+      <button class="deck-navbtn" id="deck-prev">← 上一页</button>
+      <div class="deck-dots" id="deck-dots"></div>
+      <button class="deck-navbtn primary" id="deck-next">下一页 →</button>
+    </div>
+    <div class="deck-hint-key"><kbd>←</kbd> <kbd>→</kbd> 翻页 · <kbd>Enter</kbd> 下一页 · <kbd>Esc</kbd> 回大纲</div>
+  </div>
+
+<!-- ===== CHAPTER MODULES INLINE BELOW ===== -->
+<!-- @@CHAPTERS@@ -->
+
+<script>
+(function () {
+  'use strict';
+  var CHAPTERS = [];
+  var registered = window.__pendingChapters || [];
+
+  // registerChapter 可能在本脚本之前或之后被章节模块调用
+  window.registerChapter = function (ch) {
+    CHAPTERS.push(ch);
+    if (window.__courseReady) renderHome();
+  };
+  // 消费在引擎加载前就注册的章节
+  if (Array.isArray(registered)) registered.forEach(function (c) { CHAPTERS.push(c); });
+
+  var state = { chapterIdx: 0, slideIdx: 0, seen: {} };
+
+  var $ = function (s) { return document.querySelector(s); };
+  var homeEl = $('#course-home'), deckEl = $('#course-deck');
+  var stageEl = $('#deck-stage'), dotsEl = $('#deck-dots');
+  var titleEl = $('#deck-title'), emojiEl = $('#deck-emoji'), chipEl = $('#deck-chip'), countEl = $('#deck-count');
+  var prevBtn = $('#deck-prev'), nextBtn = $('#deck-next'), backBtn = $('#deck-back');
+  var progFill = $('#course-progress').firstElementChild;
+
+  function sortedChapters() {
+    return CHAPTERS.slice().sort(function (a, b) { return (a.index || 0) - (b.index || 0); });
+  }
+
+  function setTheme(hex) {
+    document.documentElement.style.setProperty('--course-accent', hex || '#2f81f7');
+    document.documentElement.style.setProperty('--course-accent-soft', hexToSoft(hex || '#2f81f7'));
+  }
+  function hexToSoft(hex) {
+    var h = hex.replace('#', '');
+    if (h.length === 3) h = h.split('').map(function (c) { return c + c; }).join('');
+    var r = parseInt(h.substr(0, 2), 16), g = parseInt(h.substr(2, 2), 16), b = parseInt(h.substr(4, 2), 16);
+    return 'rgba(' + r + ',' + g + ',' + b + ',0.15)';
+  }
+
+  function renderHome() {
+    var chs = sortedChapters();
+    var grid = $('#chapter-grid');
+    grid.innerHTML = '';
+    chs.forEach(function (ch, i) {
+      var card = document.createElement('div');
+      card.className = 'chapter-card';
+      card.style.setProperty('--cc', ch.theme || '#2f81f7');
+      var done = state.seen['ch' + i] ? '<div class="cc-done">✓ 学过了</div>' : '';
+      card.innerHTML =
+        '<div class="cc-top">' +
+          '<span class="cc-emoji">' + (ch.emoji || '📘') + '</span>' +
+          '<span class="cc-num">第 ' + (ch.index || (i + 1)) + ' 章</span>' +
+        '</div>' +
+        '<h3>' + esc(ch.title || '未命名章节') + '</h3>' +
+        '<p>' + esc(ch.subtitle || '') + '</p>' + done;
+      card.addEventListener('click', function () { enterChapter(i, 0); });
+      grid.appendChild(card);
+    });
+    // 实战演练入口
+    var practice = document.createElement('div');
+    practice.className = 'chapter-card practice-card';
+    practice.innerHTML =
+      '<div class="cc-top"><span class="cc-emoji">🎮</span><span class="cc-num" style="--cc:#2ea043;color:#3fb950;background:rgba(46,160,67,0.15)">实战</span></div>' +
+      '<h3>实战演练：完整协作流程</h3>' +
+      '<p>理论学完，去一个仿真 GitHub 里跟着 spotlight 高亮，亲手走一遍 issue → 分支 → PR → merge。</p>';
+    practice.addEventListener('click', function () { location.href = 'github-tutorial.html'; });
+    grid.appendChild(practice);
+  }
+
+  function enterChapter(ci, si) {
+    var chs = sortedChapters();
+    if (ci < 0 || ci >= chs.length) return;
+    state.chapterIdx = ci; state.slideIdx = si || 0;
+    var ch = chs[ci];
+    setTheme(ch.theme);
+    homeEl.style.display = 'none';
+    deckEl.classList.add('active');
+    renderSlide();
+  }
+
+  function backToHome() {
+    deckEl.classList.remove('active');
+    homeEl.style.display = '';
+    renderHome();
+    window.scrollTo(0, 0);
+  }
+
+  function renderSlide() {
+    var chs = sortedChapters();
+    var ch = chs[state.chapterIdx];
+    if (!ch) return;
+    var slides = ch.slides || [];
+    var total = slides.length;
+    if (state.slideIdx < 0) state.slideIdx = 0;
+    if (state.slideIdx >= total) state.slideIdx = total - 1;
+    state.seen['ch' + state.chapterIdx] = true;
+
+    emojiEl.textContent = ch.emoji || '📘';
+    titleEl.textContent = ch.title || '';
+    chipEl.textContent = '第 ' + (ch.index || (state.chapterIdx + 1)) + ' 章';
+    countEl.textContent = (state.slideIdx + 1) + ' / ' + total;
+
+    // 重建 stage（触发淡入动画）
+    var fresh = document.createElement('div');
+    fresh.className = 'deck-stage';
+    fresh.id = 'deck-stage';
+    stageEl.parentNode.replaceChild(fresh, stageEl);
+    stageEl = fresh;
+
+    var api = {
+      next: goNext, prev: goPrev,
+      gotoSlide: function (n) { state.slideIdx = n; renderSlide(); },
+      index: state.slideIdx, total: total
+    };
+    try {
+      var slide = slides[state.slideIdx];
+      if (slide && typeof slide.render === 'function') {
+        slide.render(stageEl, api);
+      } else {
+        stageEl.innerHTML = '<div class="deck-center"><p class="deck-p">（这一页没有内容）</p></div>';
+      }
+    } catch (e) {
+      stageEl.innerHTML = '<div class="deck-callout warn">这一页渲染出错了：' + esc(String(e && e.message || e)) + '</div>';
+      if (window.console) console.error(e);
+    }
+
+    // dots
+    dotsEl.innerHTML = '';
+    for (var i = 0; i < total; i++) {
+      (function (idx) {
+        var d = document.createElement('div');
+        d.className = 'deck-dot' + (idx === state.slideIdx ? ' active' : (idx < state.slideIdx ? ' seen' : ''));
+        d.addEventListener('click', function () { state.slideIdx = idx; renderSlide(); });
+        dotsEl.appendChild(d);
+      })(i);
+    }
+
+    prevBtn.disabled = false; // 首页 prev 回上一章
+    var atLast = state.slideIdx === total - 1;
+    var lastChapter = state.chapterIdx === chs.length - 1;
+    nextBtn.textContent = atLast ? (lastChapter ? '回到大纲 ✓' : '下一章 →') : '下一页 →';
+
+    // 全课程进度
+    updateGlobalProgress(chs);
+    window.scrollTo(0, 0);
+  }
+
+  function updateGlobalProgress(chs) {
+    var totalSlides = 0, doneSlides = 0;
+    chs.forEach(function (c, ci) {
+      var t = (c.slides || []).length; totalSlides += t;
+      if (ci < state.chapterIdx) doneSlides += t;
+      else if (ci === state.chapterIdx) doneSlides += (state.slideIdx + 1);
+    });
+    progFill.style.width = totalSlides ? Math.round(doneSlides / totalSlides * 100) + '%' : '0%';
+  }
+
+  function goNext() {
+    var chs = sortedChapters();
+    var ch = chs[state.chapterIdx];
+    var total = (ch.slides || []).length;
+    if (state.slideIdx < total - 1) {
+      state.slideIdx++; renderSlide();
+    } else if (state.chapterIdx < chs.length - 1) {
+      enterChapter(state.chapterIdx + 1, 0);
+    } else {
+      backToHome();
+    }
+  }
+  function goPrev() {
+    var chs = sortedChapters();
+    if (state.slideIdx > 0) {
+      state.slideIdx--; renderSlide();
+    } else if (state.chapterIdx > 0) {
+      var prevCh = chs[state.chapterIdx - 1];
+      enterChapter(state.chapterIdx - 1, (prevCh.slides || []).length - 1);
+    } else {
+      backToHome();
+    }
+  }
+
+  nextBtn.addEventListener('click', goNext);
+  prevBtn.addEventListener('click', goPrev);
+  backBtn.addEventListener('click', backToHome);
+
+  document.addEventListener('keydown', function (e) {
+    if (!deckEl.classList.contains('active')) return;
+    var tag = (e.target && e.target.tagName || '').toLowerCase();
+    var typing = tag === 'input' || tag === 'textarea' || (e.target && e.target.isContentEditable);
+    if (typing) return;
+    if (e.key === 'Escape') { e.preventDefault(); backToHome(); }
+    else if (e.key === 'ArrowRight' || e.key === 'Enter' || e.key === ' ') { e.preventDefault(); goNext(); }
+    else if (e.key === 'ArrowLeft') { e.preventDefault(); goPrev(); }
+  });
+
+  function esc(s) {
+    return String(s).replace(/[&<>"]/g, function (c) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c];
+    });
+  }
+
+  // 启动
+  window.__courseReady = true;
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', renderHome);
+  } else {
+    renderHome();
+  }
+})();
+</script>
+</body>
+</html>

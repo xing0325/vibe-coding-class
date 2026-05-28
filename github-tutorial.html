@@ -1338,6 +1338,174 @@
       color: var(--fg-muted);
       font-size: 13px;
     }
+
+    /* ============================================================
+       Repo right sidebar: About + Releases (v3)
+       ============================================================ */
+    .repo-sidebar {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+    .repo-sidebar .about-desc {
+      color: var(--fg-default);
+      font-size: 14px;
+      margin: 0 0 12px;
+    }
+    .repo-sidebar .about-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      color: var(--fg-muted);
+      font-size: 13px;
+      margin-bottom: 8px;
+    }
+    .repo-sidebar .about-row a { color: var(--fg-link); }
+    .repo-sidebar .about-row .octicon { color: var(--fg-muted); flex-shrink: 0; }
+    .topic-list {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin: 0 0 16px;
+    }
+    .topic-pill {
+      display: inline-block;
+      padding: 0 10px;
+      line-height: 22px;
+      font-size: 12px;
+      font-weight: 500;
+      border-radius: 2em;
+      background-color: rgba(56, 139, 253, 0.15);
+      color: var(--fg-link);
+      cursor: pointer;
+    }
+    .topic-pill:hover { background-color: rgba(56, 139, 253, 0.3); }
+    .sidebar-section {
+      border-top: 1px solid var(--border-muted);
+      padding-top: 16px;
+    }
+    .sidebar-section:first-child { border-top: 0; padding-top: 0; }
+    .sidebar-section .sb-title {
+      font-size: 16px;
+      font-weight: 600;
+      color: var(--fg-default);
+      margin-bottom: 8px;
+    }
+    .release-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      cursor: pointer;
+      padding: 4px 0;
+    }
+    .release-row .octicon { color: var(--success-fg); flex-shrink: 0; }
+    .release-tag {
+      font-weight: 600;
+      color: var(--fg-link);
+    }
+    .latest-badge {
+      display: inline-block;
+      padding: 0 7px;
+      line-height: 18px;
+      font-size: 12px;
+      font-weight: 500;
+      border-radius: 2em;
+      border: 1px solid var(--success-fg);
+      color: var(--success-fg);
+    }
+    .release-date {
+      color: var(--fg-muted);
+      font-size: 12px;
+      margin-left: auto;
+    }
+    .release-detail {
+      display: none;
+      margin-top: 10px;
+      padding: 12px 14px;
+      border: 1px solid var(--border-default);
+      border-radius: 6px;
+      background-color: var(--bg-subtle);
+    }
+    .release-detail.open { display: block; }
+    .release-detail .ver {
+      font-weight: 600;
+      color: var(--fg-default);
+      margin-bottom: 6px;
+    }
+    .release-detail ul {
+      margin: 0;
+      padding-left: 18px;
+      color: var(--fg-muted);
+      font-size: 13px;
+    }
+    .release-detail li { margin: 2px 0; }
+
+    /* Clone dropdown on the green Code button (v3) */
+    .code-clone-wrap { position: relative; display: inline-block; }
+    .clone-panel {
+      display: none;
+      position: absolute;
+      top: 100%;
+      right: 0;
+      margin-top: 6px;
+      width: 320px;
+      background-color: var(--bg-canvas);
+      border: 1px solid var(--border-default);
+      border-radius: 6px;
+      box-shadow: 0 8px 24px rgba(1, 4, 9, 0.6);
+      z-index: 50;
+      padding: 12px;
+    }
+    .clone-panel.open { display: block; z-index: 9050; }
+    .clone-panel .clone-label {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--fg-default);
+      margin-bottom: 8px;
+    }
+    .clone-input-row {
+      display: flex;
+      gap: 6px;
+      align-items: stretch;
+    }
+    .clone-input-row input {
+      flex: 1;
+      min-width: 0;
+      background-color: var(--bg-default);
+      border: 1px solid var(--border-default);
+      border-radius: 6px;
+      color: var(--fg-default);
+      font-size: 12px;
+      padding: 5px 8px;
+      font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+    }
+    .clone-copy-btn {
+      flex-shrink: 0;
+      background-color: var(--bg-emphasis);
+      border: 1px solid var(--border-default);
+      color: var(--fg-default);
+      border-radius: 6px;
+      padding: 5px 10px;
+      font-size: 12px;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+    }
+    .clone-copy-btn:hover { background-color: #30363d; }
+    .clone-copy-btn.copied { color: var(--success-fg); border-color: var(--success-fg); }
+
+    /* Selected Approve review option highlight (v3) */
+    .review-options label.selected {
+      border: 1px solid var(--success-fg);
+      background-color: rgba(46, 160, 67, 0.12);
+      border-radius: 6px;
+      padding: 8px;
+      margin: -1px -9px;
+    }
+
+    /* PR Files-changed view (hidden by default) (v3) */
+    #pr-files-view { display: none; }
   </style>
 </head>
 <body>
@@ -1544,12 +1712,12 @@
             Watch
             <span class="counter">1</span>
           </button>
-          <button class="btn">
+          <button class="btn" id="repo-fork-btn" data-tut="repo-fork">
             <svg class="octicon" width="16" height="16" aria-hidden="true"><use href="#icon-repo-forked"/></svg>
             Fork
             <span class="counter">0</span>
           </button>
-          <button class="btn">
+          <button class="btn" id="repo-star-btn" data-tut="repo-star">
             <svg class="octicon" width="16" height="16" aria-hidden="true"><use href="#icon-star"/></svg>
             Star
             <span class="counter">2</span>
@@ -1618,6 +1786,9 @@
       </button></a>
     </div>
 
+    <div class="two-col">
+      <div>
+
     <div class="file-toolbar">
       <button class="branch-dd" data-tut="branch-dropdown" aria-haspopup="listbox">
         <svg class="octicon" width="16" height="16" aria-hidden="true"><use href="#icon-git-branch"/></svg>
@@ -1640,15 +1811,27 @@
           Add file
           <svg class="octicon" width="10" height="10" aria-hidden="true"><use href="#icon-triangle-down"/></svg>
         </button>
-        <button class="btn btn-primary">
-          <svg class="octicon" width="16" height="16" aria-hidden="true"><use href="#icon-code"/></svg>
-          Code
-          <svg class="octicon" width="10" height="10" aria-hidden="true"><use href="#icon-triangle-down"/></svg>
-        </button>
+        <div class="code-clone-wrap">
+          <button class="btn btn-primary" id="code-clone-btn" data-tut="code-clone-btn" aria-haspopup="dialog" aria-expanded="false">
+            <svg class="octicon" width="16" height="16" aria-hidden="true"><use href="#icon-code"/></svg>
+            Code
+            <svg class="octicon" width="10" height="10" aria-hidden="true"><use href="#icon-triangle-down"/></svg>
+          </button>
+          <div class="clone-panel" id="clone-panel" role="dialog" aria-label="Clone this repository">
+            <div class="clone-label">Clone</div>
+            <div class="clone-input-row">
+              <input type="text" id="clone-url-input" readonly value="https://github.com/xing0325/vibe-coding-class.git" aria-label="Clone URL" />
+              <button class="clone-copy-btn" id="clone-copy-btn" type="button">
+                <svg class="octicon" width="16" height="16" aria-hidden="true"><use href="#icon-link"/></svg>
+                <span class="clone-copy-label">复制</span>
+              </button>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
 
-    <table class="file-table">
+    <table class="file-table" data-tut="repo-file-list">
       <thead>
         <tr>
           <td colspan="4">
@@ -1693,7 +1876,7 @@
       </tbody>
     </table>
 
-    <div class="readme-box">
+    <div class="readme-box" data-tut="repo-readme">
       <div class="readme-header">
         <svg class="octicon" width="16" height="16" aria-hidden="true"><use href="#icon-book"/></svg>
         <span>README.md</span>
@@ -1703,6 +1886,63 @@
         <p style="color: var(--fg-default)">A starter repo for the GitHub collaboration workshop. Fork it, branch off, and open your first pull request.</p>
         <p style="color: var(--fg-muted)">No content here yet. Be the first to push something useful.</p>
       </div>
+    </div>
+
+      </div>
+
+      <aside class="repo-sidebar">
+        <div class="sidebar-section" data-tut="repo-about">
+          <div class="sb-title">About</div>
+          <p class="about-desc">A starter repo for the GitHub collaboration workshop.</p>
+          <div class="topic-list">
+            <span class="topic-pill">git</span>
+            <span class="topic-pill">tutorial</span>
+            <span class="topic-pill">education</span>
+          </div>
+          <div class="about-row">
+            <svg class="octicon" width="16" height="16" aria-hidden="true"><use href="#icon-link"/></svg>
+            <a href="#">github.com/xing0325/vibe-coding-class</a>
+          </div>
+          <div class="about-row">
+            <svg class="octicon" width="16" height="16" aria-hidden="true"><use href="#icon-book"/></svg>
+            <span>Readme</span>
+          </div>
+          <div class="about-row">
+            <svg class="octicon" width="16" height="16" aria-hidden="true"><use href="#icon-shield"/></svg>
+            <span>MIT license</span>
+          </div>
+          <div class="about-row">
+            <svg class="octicon" width="16" height="16" aria-hidden="true"><use href="#icon-star"/></svg>
+            <span><strong style="color:var(--fg-default)">2</strong> stars</span>
+          </div>
+          <div class="about-row">
+            <svg class="octicon" width="16" height="16" aria-hidden="true"><use href="#icon-eye"/></svg>
+            <span><strong style="color:var(--fg-default)">1</strong> watching</span>
+          </div>
+          <div class="about-row">
+            <svg class="octicon" width="16" height="16" aria-hidden="true"><use href="#icon-repo-forked"/></svg>
+            <span><strong style="color:var(--fg-default)">0</strong> forks</span>
+          </div>
+        </div>
+
+        <div class="sidebar-section" data-tut="repo-releases">
+          <div class="sb-title">Releases</div>
+          <div class="release-row" id="release-row" role="button" aria-expanded="false" tabindex="0">
+            <svg class="octicon" width="16" height="16" aria-hidden="true"><use href="#icon-tag"/></svg>
+            <span class="release-tag">v1.0.0</span>
+            <span class="latest-badge">Latest</span>
+            <span class="release-date">on 2026-05-20</span>
+          </div>
+          <div class="release-detail" id="release-detail">
+            <div class="ver">v1.0.0</div>
+            <ul>
+              <li>首次发布</li>
+              <li>加入 README</li>
+              <li>修复若干问题</li>
+            </ul>
+          </div>
+        </div>
+      </aside>
     </div>
   </main>
 
@@ -2255,7 +2495,7 @@
     </div>
 
     <nav class="pr-tabs">
-      <a class="pr-tab active" href="#pr-detail">
+      <a class="pr-tab active" href="#pr-detail" id="pr-tab-conversation" data-tut="conversation-tab">
         <svg class="octicon" width="16" height="16" aria-hidden="true"><use href="#icon-comment-discussion"/></svg>
         Conversation <span class="counter">0</span>
       </a>
@@ -2267,13 +2507,35 @@
         <svg class="octicon" width="16" height="16" aria-hidden="true"><use href="#icon-check"/></svg>
         Checks <span class="counter">0</span>
       </a>
-      <a class="pr-tab" href="#pr-detail" data-tut="files-changed-tab">
+      <a class="pr-tab" href="#pr-detail" id="pr-tab-files" data-tut="files-changed-tab">
         <svg class="octicon" width="16" height="16" aria-hidden="true"><use href="#icon-file"/></svg>
         Files changed <span class="counter">1</span>
       </a>
     </nav>
 
-    <div class="two-col">
+    <!-- Files changed view (toggled by the Files changed / Conversation tabs) -->
+    <div id="pr-files-view">
+      <div class="compare-head">
+        <span>Showing <strong style="color:var(--fg-default)">1 changed file</strong> with</span>
+        <span class="diff-stat-add">1 addition</span>
+        <span>and 0 deletions.</span>
+      </div>
+      <div class="diff-box">
+        <div class="diff-header">
+          <svg class="octicon" width="16" height="16" aria-hidden="true"><use href="#icon-file"/></svg>
+          <span>README.md</span>
+          <span style="margin-left:auto;" class="diff-stat-add">+1</span>
+        </div>
+        <div class="diff-body">
+          <div class="diff-line context"><span class="ln">1</span><span class="code"># vibe-coding-class</span></div>
+          <div class="diff-line context"><span class="ln">2</span><span class="code"></span></div>
+          <div class="diff-line context"><span class="ln">3</span><span class="code">A starter repo for the GitHub collaboration workshop.</span></div>
+          <div class="diff-line add"><span class="ln">4</span><span class="code">hello world</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="two-col" id="pr-conversation-view">
       <div>
         <div class="comment-thread">
           <div class="comment">
@@ -2949,6 +3211,109 @@
                 if (cb.value === 'xing0325') toast('✅ 你认领了这个 issue');
                 else toast('🔔 已 @ ' + cb.value + ' 来看这个 issue');
               }
+            });
+          });
+        }
+
+        // --- Code 按钮：展开 clone 面板 + 复制地址 ---
+        var cloneBtn = document.getElementById('code-clone-btn');
+        var clonePanel = document.getElementById('clone-panel');
+        if (cloneBtn && clonePanel) {
+          cloneBtn.addEventListener('click', function (e) {
+            e.preventDefault();
+            e.stopPropagation();
+            var open = clonePanel.classList.toggle('open');
+            cloneBtn.setAttribute('aria-expanded', open ? 'true' : 'false');
+          });
+          // 点空白处关闭
+          document.addEventListener('click', function (e) {
+            if (!clonePanel.classList.contains('open')) return;
+            if (cloneBtn.contains(e.target) || clonePanel.contains(e.target)) return;
+            clonePanel.classList.remove('open');
+            cloneBtn.setAttribute('aria-expanded', 'false');
+          });
+          var copyBtn = document.getElementById('clone-copy-btn');
+          var cloneInput = document.getElementById('clone-url-input');
+          if (copyBtn && cloneInput) {
+            copyBtn.addEventListener('click', function () {
+              var label = copyBtn.querySelector('.clone-copy-label');
+              function showCopied() {
+                copyBtn.classList.add('copied');
+                if (label) label.textContent = '✓ 已复制';
+                setTimeout(function () {
+                  copyBtn.classList.remove('copied');
+                  if (label) label.textContent = '复制';
+                }, 1600);
+              }
+              var done = false;
+              if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(cloneInput.value).then(showCopied, function () {
+                  cloneInput.select(); document.execCommand && document.execCommand('copy'); showCopied();
+                });
+                done = true;
+              }
+              if (!done) {
+                cloneInput.select();
+                try { document.execCommand('copy'); } catch (err) {}
+                showCopied();
+              }
+            });
+          }
+        }
+
+        // --- Fork 按钮：显示已 fork 反馈 ---
+        var forkBtn = document.getElementById('repo-fork-btn');
+        if (forkBtn) forkBtn.addEventListener('click', function () {
+          toast('✅ 已 fork 到 your-name/vibe-coding-class');
+        });
+
+        // --- Releases 模块：点击展开 changelog ---
+        var releaseRow = document.getElementById('release-row');
+        var releaseDetail = document.getElementById('release-detail');
+        if (releaseRow && releaseDetail) {
+          function toggleRelease() {
+            var open = releaseDetail.classList.toggle('open');
+            releaseRow.setAttribute('aria-expanded', open ? 'true' : 'false');
+          }
+          releaseRow.addEventListener('click', toggleRelease);
+          releaseRow.addEventListener('keydown', function (e) {
+            if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggleRelease(); }
+          });
+        }
+
+        // --- PR 详情：Files changed / Conversation 真正的 tab 切换 ---
+        var tabConversation = document.getElementById('pr-tab-conversation');
+        var tabFiles = document.getElementById('pr-tab-files');
+        var convView = document.getElementById('pr-conversation-view');
+        var filesView = document.getElementById('pr-files-view');
+        if (tabFiles && convView && filesView) {
+          tabFiles.addEventListener('click', function (e) {
+            e.preventDefault();
+            filesView.style.display = 'block';
+            convView.style.display = 'none';
+            tabFiles.classList.add('active');
+            if (tabConversation) tabConversation.classList.remove('active');
+          });
+        }
+        if (tabConversation && convView && filesView) {
+          tabConversation.addEventListener('click', function (e) {
+            e.preventDefault();
+            filesView.style.display = 'none';
+            convView.style.display = 'grid';
+            tabConversation.classList.add('active');
+            if (tabFiles) tabFiles.classList.remove('active');
+          });
+        }
+
+        // --- Review：选中 Approve 行高亮 ---
+        var reviewOptionsBox = reviewBlock ? reviewBlock.querySelector('.review-options') : null;
+        if (reviewOptionsBox) {
+          var reviewRadios = reviewOptionsBox.querySelectorAll('input[type="radio"][name="review-type"]');
+          reviewRadios.forEach(function (radio) {
+            radio.addEventListener('change', function () {
+              reviewOptionsBox.querySelectorAll('label').forEach(function (lbl) {
+                lbl.classList.toggle('selected', lbl.contains(radio) && radio.checked);
+              });
             });
           });
         }
@@ -3632,6 +3997,119 @@ const GLOSSARY = {
   STEPS.forEach(function (s) {
     if (s.target && clickTargets.indexOf(s.target) !== -1) s.nextOn = 'click';
   });
+})();
+
+// ------------------------------------------------------------
+// 增量补丁 A：仓库页导览（spotlight 框选讲解）
+// 锚点：target === 'nav-code'（"仓库建好了"那步）。在它之后依次插入 7 步，
+// 把第8章「GitHub 仓库页导览」的几站转写成右侧仿真页的 spotlight 引导。
+// 全部 role:'system' / page:'repo' / aiPrompt:null / inputValidator:null。
+// ------------------------------------------------------------
+(function () {
+  var idx = -1;
+  for (var i = 0; i < STEPS.length; i++) { if (STEPS[i].target === 'nav-code') { idx = i; break; } }
+  if (idx === -1) return;
+  var anchorId = STEPS[idx].id;           // 锚点 step 的 id（先记下来）
+  var newSteps = [
+    {
+      role: 'system', page: 'repo', target: 'repo-file-list', nextOn: 'auto',
+      title: '区域①：文件列表',
+      body: '页面中间这张表，列着项目里的<strong>所有文件和文件夹</strong>。点任意一个文件就看里面的内容，点文件夹就钻进去看下一层。每行后面还跟着这个文件<strong>最后一次的 commit message</strong>和<strong>更新时间</strong>，扫一眼就知道它最近经历了啥。',
+      aiPrompt: null, inputValidator: null
+    },
+    {
+      role: 'system', page: 'repo', target: 'code-clone-btn', nextOn: 'click',
+      title: '区域②：绿色 Code 按钮',
+      body: '👉 点右上那个大绿按钮 <strong>Code</strong>，会弹出一个仓库地址。<strong>AI 时代怎么用</strong>：把这串地址丢给你的 coding agent，对它说一句「<code>帮我 clone 这个仓库</code>」，整个项目就下载到你电脑上了，立刻能开干。',
+      aiPrompt: null, inputValidator: null
+    },
+    {
+      role: 'system', page: 'repo', target: 'repo-readme', nextOn: 'auto',
+      title: '区域③：README',
+      body: '文件列表下面这一大块，是 <code>README.md</code>。GitHub 会<strong>自动读取并渲染</strong>它，不用你做任何事。README 是项目的<strong>门面</strong>——讲清这个项目是<strong>做什么用的、怎么用</strong>。看一个陌生项目，先读它就对了。',
+      aiPrompt: null, inputValidator: null
+    },
+    {
+      role: 'system', page: 'repo', target: 'repo-about', nextOn: 'auto',
+      title: '区域④：About',
+      body: '页面右上这张「一句话名片」就是 <strong>About</strong>：项目<strong>简介</strong>、几个 topics <strong>标签</strong>（像 education、ai，方便别人搜到），还有<strong>开源协议 License</strong>（比如 MIT，说明别人能怎么用你的代码）。想快速判断项目干啥的，扫一眼这里就够。',
+      aiPrompt: null, inputValidator: null
+    },
+    {
+      role: 'system', page: 'repo', target: 'repo-releases', nextOn: 'click',
+      title: '区域⑤：Releases',
+      body: '👉 点右侧的 <strong>Releases</strong> 卡片进去看看。这里是项目的<strong>版本发布</strong>记录——每发一个新版本就记一笔。点进某个版本，能看到它的<strong>版本号</strong>，以及这个版本<strong>更新了哪些内容（changelog）</strong>。',
+      aiPrompt: null, inputValidator: null
+    },
+    {
+      role: 'system', page: 'repo', target: 'repo-star', nextOn: 'auto',
+      title: '区域⑥：Star',
+      body: '右上的 <strong>★ Star</strong> 是程序员的「一键三连」——给项目<strong>点赞 + 收藏</strong>，表示喜欢。一个项目 Star 越多，说明它越受欢迎。逛 GitHub 看到好东西，顺手点个 Star 就对了。',
+      aiPrompt: null, inputValidator: null
+    },
+    {
+      role: 'system', page: 'repo', target: 'repo-fork', nextOn: 'click',
+      title: '区域⑦：Fork',
+      body: '👉 点旁边的 <strong>⑂ Fork</strong> 看看。Fork = 把这个项目<strong>原样复制一份到你自己名下</strong>，变成属于你的仓库。之后你随便 DIY、随便改，都<strong>动不到原作者一根毫毛</strong>。想参与别人的项目，第一步常常就是 fork。',
+      aiPrompt: null, inputValidator: null
+    }
+  ];
+  var N = newSteps.length;
+  // 1) 先把所有 id > 锚点id 的 step 整体 +N（腾出 anchorId+1 .. anchorId+N 的号段）
+  for (var j = 0; j < STEPS.length; j++) { if (STEPS[j].id > anchorId) STEPS[j].id += N; }
+  // 2) 给新步接续编号，splice 插到锚点后面
+  for (var k = 0; k < N; k++) { newSteps[k].id = anchorId + 1 + k; }
+  STEPS.splice.apply(STEPS, [idx + 1, 0].concat(newSteps));
+  // 3) PITFALLS.beforeStep > 锚点id 的同步 +N
+  for (var p = 0; p < PITFALLS.length; p++) { if (PITFALLS[p].beforeStep > anchorId) PITFALLS[p].beforeStep += N; }
+})();
+
+// ------------------------------------------------------------
+// 增量补丁 B：多人协作心法（旁白讲解卡片）
+// 锚点：target === 'compare-pr-banner'（"回 GitHub 看黄条"那步）。在它之前
+// 插入 4 个旁白步，把第9章「多人协作」的核心心法转写进来。
+// 全部 role:'system' / page:'ai' / target:null / nextOn:'auto' / aiPrompt:null。
+// 注意：锚点 index 在本 IIFE 内实时查（补丁 A 可能已改变数组）。
+// ------------------------------------------------------------
+(function () {
+  var idx = -1;
+  for (var i = 0; i < STEPS.length; i++) { if (STEPS[i].target === 'compare-pr-banner') { idx = i; break; } }
+  if (idx === -1) return;
+  var anchorId = STEPS[idx].id;           // 锚点 step 的 id
+  var narration = [
+    {
+      role: 'system', page: 'ai', target: null, nextOn: 'auto',
+      title: 'fork 模式 vs 协作者模式',
+      body: '参与协作有两种方式。想插手<strong>陌生人的开源项目</strong>，得先 <strong>fork</strong>（复刻一份到自己名下），在副本上改完再发 PR 交回去。但咱们这门课是<strong>熟人小团队</strong>——你早被仓库主人邀成<strong>协作者（collaborator）</strong>了，省掉 fork 这步，直接在同一个仓库里开分支干活。',
+      aiPrompt: null, inputValidator: null
+    },
+    {
+      role: 'system', page: 'ai', target: null, nextOn: 'auto',
+      title: '黄金法则：别在 main 上改',
+      body: '🛑 记死这条：<strong>永远别直接在 <span data-term="main">main</span> 上改代码！</strong>你改的同时上游 main 也在更新。只要你的改动都在<strong>分支</strong>上、main 保持纯净，从上游 pull 最新时 main 只需「<strong>快进 fast-forward</strong>」——零合并、零冲突。直接在 main 上改，就会撞三方合并、解冲突、历史变乱。',
+      aiPrompt: null, inputValidator: null
+    },
+    {
+      role: 'system', page: 'ai', target: null, nextOn: 'auto',
+      title: 'PR 的本质是「提案」',
+      body: '接下来你要发的 <span data-term="PR">PR</span>（Pull Request），<strong>不是直接把代码合进去</strong>，而是一个「<strong>请把我这条分支合进 main</strong>」的提案。你举手说「我写好了，请看看」，然后要经过<strong>code review（代码审核）</strong>——仓库主人逐行看过、点同意，才会真的合进 <span data-term="main">main</span>。被打回很正常，这是协作不是考试。',
+      aiPrompt: null, inputValidator: null
+    },
+    {
+      role: 'system', page: 'ai', target: null, nextOn: 'auto',
+      title: '彩蛋：cherry-pick 摘樱桃 🍒',
+      body: '再送你一招。当你<strong>只想要别的分支上某一个特定的 <span data-term="commit">commit</span></strong>、而不是整条分支时，用 <strong>cherry-pick</strong>：把那个 commit 的 <strong>hash</strong> 给 AI，说一句「<code>帮我 cherry-pick 这个提交</code>」，它就把那一颗「樱桃」摘到你当前分支末尾，其余提交一概不动。',
+      aiPrompt: null, inputValidator: null
+    }
+  ];
+  var N = narration.length;
+  // 1) 旁白插在锚点之前，新步占 anchorId .. anchorId+N-1，锚点及其后所有 id >= anchorId 的 +N
+  for (var j = 0; j < STEPS.length; j++) { if (STEPS[j].id >= anchorId) STEPS[j].id += N; }
+  // 2) 新步接续旧锚点 id（旧 anchorId 开始），splice 到锚点位置之前
+  for (var k = 0; k < N; k++) { narration[k].id = anchorId + k; }
+  STEPS.splice.apply(STEPS, [idx, 0].concat(narration));
+  // 3) PITFALLS.beforeStep >= 锚点id 的同步 +N（旁白插在它们之前，编号要一起后移）
+  for (var p = 0; p < PITFALLS.length; p++) { if (PITFALLS[p].beforeStep >= anchorId) PITFALLS[p].beforeStep += N; }
 })();
 
 // 暴露给引擎
@@ -5739,14 +6217,14 @@ window.TUTORIAL_DATA = { STEPS, PITFALLS, GLOSSARY };
 
 </script>
 <script>
-window.TUTORIAL_VERSION = 'v16-auto-input-enter-2026-05-29';
+window.TUTORIAL_VERSION = 'v17-repo-tour-collab-2026-05-29';
 (function(){
   function boot(){
-    if (!window.TUTORIAL_DATA) { console.error('TUTORIAL_DATA missing'); return; }
-    if (!window.startTutorial)  { console.error('startTutorial missing'); return; }
-    window.startTutorial(window.TUTORIAL_DATA.STEPS, window.TUTORIAL_DATA.PITFALLS, window.TUTORIAL_DATA.GLOSSARY);
+    if(!window.TUTORIAL_DATA){console.error('TUTORIAL_DATA missing');return;}
+    if(!window.startTutorial){console.error('startTutorial missing');return;}
+    window.startTutorial(window.TUTORIAL_DATA.STEPS,window.TUTORIAL_DATA.PITFALLS,window.TUTORIAL_DATA.GLOSSARY);
   }
-  if (document.readyState === 'loading') { document.addEventListener('DOMContentLoaded', boot); } else { boot(); }
+  if(document.readyState==='loading'){document.addEventListener('DOMContentLoaded',boot);}else{boot();}
 })();
 </script></body>
 </html>

@@ -1338,6 +1338,174 @@
       color: var(--fg-muted);
       font-size: 13px;
     }
+
+    /* ============================================================
+       Repo right sidebar: About + Releases (v3)
+       ============================================================ */
+    .repo-sidebar {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+    .repo-sidebar .about-desc {
+      color: var(--fg-default);
+      font-size: 14px;
+      margin: 0 0 12px;
+    }
+    .repo-sidebar .about-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      color: var(--fg-muted);
+      font-size: 13px;
+      margin-bottom: 8px;
+    }
+    .repo-sidebar .about-row a { color: var(--fg-link); }
+    .repo-sidebar .about-row .octicon { color: var(--fg-muted); flex-shrink: 0; }
+    .topic-list {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin: 0 0 16px;
+    }
+    .topic-pill {
+      display: inline-block;
+      padding: 0 10px;
+      line-height: 22px;
+      font-size: 12px;
+      font-weight: 500;
+      border-radius: 2em;
+      background-color: rgba(56, 139, 253, 0.15);
+      color: var(--fg-link);
+      cursor: pointer;
+    }
+    .topic-pill:hover { background-color: rgba(56, 139, 253, 0.3); }
+    .sidebar-section {
+      border-top: 1px solid var(--border-muted);
+      padding-top: 16px;
+    }
+    .sidebar-section:first-child { border-top: 0; padding-top: 0; }
+    .sidebar-section .sb-title {
+      font-size: 16px;
+      font-weight: 600;
+      color: var(--fg-default);
+      margin-bottom: 8px;
+    }
+    .release-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      cursor: pointer;
+      padding: 4px 0;
+    }
+    .release-row .octicon { color: var(--success-fg); flex-shrink: 0; }
+    .release-tag {
+      font-weight: 600;
+      color: var(--fg-link);
+    }
+    .latest-badge {
+      display: inline-block;
+      padding: 0 7px;
+      line-height: 18px;
+      font-size: 12px;
+      font-weight: 500;
+      border-radius: 2em;
+      border: 1px solid var(--success-fg);
+      color: var(--success-fg);
+    }
+    .release-date {
+      color: var(--fg-muted);
+      font-size: 12px;
+      margin-left: auto;
+    }
+    .release-detail {
+      display: none;
+      margin-top: 10px;
+      padding: 12px 14px;
+      border: 1px solid var(--border-default);
+      border-radius: 6px;
+      background-color: var(--bg-subtle);
+    }
+    .release-detail.open { display: block; }
+    .release-detail .ver {
+      font-weight: 600;
+      color: var(--fg-default);
+      margin-bottom: 6px;
+    }
+    .release-detail ul {
+      margin: 0;
+      padding-left: 18px;
+      color: var(--fg-muted);
+      font-size: 13px;
+    }
+    .release-detail li { margin: 2px 0; }
+
+    /* Clone dropdown on the green Code button (v3) */
+    .code-clone-wrap { position: relative; display: inline-block; }
+    .clone-panel {
+      display: none;
+      position: absolute;
+      top: 100%;
+      right: 0;
+      margin-top: 6px;
+      width: 320px;
+      background-color: var(--bg-canvas);
+      border: 1px solid var(--border-default);
+      border-radius: 6px;
+      box-shadow: 0 8px 24px rgba(1, 4, 9, 0.6);
+      z-index: 50;
+      padding: 12px;
+    }
+    .clone-panel.open { display: block; z-index: 9050; }
+    .clone-panel .clone-label {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--fg-default);
+      margin-bottom: 8px;
+    }
+    .clone-input-row {
+      display: flex;
+      gap: 6px;
+      align-items: stretch;
+    }
+    .clone-input-row input {
+      flex: 1;
+      min-width: 0;
+      background-color: var(--bg-default);
+      border: 1px solid var(--border-default);
+      border-radius: 6px;
+      color: var(--fg-default);
+      font-size: 12px;
+      padding: 5px 8px;
+      font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+    }
+    .clone-copy-btn {
+      flex-shrink: 0;
+      background-color: var(--bg-emphasis);
+      border: 1px solid var(--border-default);
+      color: var(--fg-default);
+      border-radius: 6px;
+      padding: 5px 10px;
+      font-size: 12px;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+    }
+    .clone-copy-btn:hover { background-color: #30363d; }
+    .clone-copy-btn.copied { color: var(--success-fg); border-color: var(--success-fg); }
+
+    /* Selected Approve review option highlight (v3) */
+    .review-options label.selected {
+      border: 1px solid var(--success-fg);
+      background-color: rgba(46, 160, 67, 0.12);
+      border-radius: 6px;
+      padding: 8px;
+      margin: -1px -9px;
+    }
+
+    /* PR Files-changed view (hidden by default) (v3) */
+    #pr-files-view { display: none; }
   </style>
 </head>
 <body>
@@ -1544,12 +1712,12 @@
             Watch
             <span class="counter">1</span>
           </button>
-          <button class="btn">
+          <button class="btn" id="repo-fork-btn" data-tut="repo-fork">
             <svg class="octicon" width="16" height="16" aria-hidden="true"><use href="#icon-repo-forked"/></svg>
             Fork
             <span class="counter">0</span>
           </button>
-          <button class="btn">
+          <button class="btn" id="repo-star-btn" data-tut="repo-star">
             <svg class="octicon" width="16" height="16" aria-hidden="true"><use href="#icon-star"/></svg>
             Star
             <span class="counter">2</span>
@@ -1618,6 +1786,9 @@
       </button></a>
     </div>
 
+    <div class="two-col">
+      <div>
+
     <div class="file-toolbar">
       <button class="branch-dd" data-tut="branch-dropdown" aria-haspopup="listbox">
         <svg class="octicon" width="16" height="16" aria-hidden="true"><use href="#icon-git-branch"/></svg>
@@ -1640,15 +1811,27 @@
           Add file
           <svg class="octicon" width="10" height="10" aria-hidden="true"><use href="#icon-triangle-down"/></svg>
         </button>
-        <button class="btn btn-primary">
-          <svg class="octicon" width="16" height="16" aria-hidden="true"><use href="#icon-code"/></svg>
-          Code
-          <svg class="octicon" width="10" height="10" aria-hidden="true"><use href="#icon-triangle-down"/></svg>
-        </button>
+        <div class="code-clone-wrap">
+          <button class="btn btn-primary" id="code-clone-btn" data-tut="code-clone-btn" aria-haspopup="dialog" aria-expanded="false">
+            <svg class="octicon" width="16" height="16" aria-hidden="true"><use href="#icon-code"/></svg>
+            Code
+            <svg class="octicon" width="10" height="10" aria-hidden="true"><use href="#icon-triangle-down"/></svg>
+          </button>
+          <div class="clone-panel" id="clone-panel" role="dialog" aria-label="Clone this repository">
+            <div class="clone-label">Clone</div>
+            <div class="clone-input-row">
+              <input type="text" id="clone-url-input" readonly value="https://github.com/xing0325/vibe-coding-class.git" aria-label="Clone URL" />
+              <button class="clone-copy-btn" id="clone-copy-btn" type="button">
+                <svg class="octicon" width="16" height="16" aria-hidden="true"><use href="#icon-link"/></svg>
+                <span class="clone-copy-label">复制</span>
+              </button>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
 
-    <table class="file-table">
+    <table class="file-table" data-tut="repo-file-list">
       <thead>
         <tr>
           <td colspan="4">
@@ -1693,7 +1876,7 @@
       </tbody>
     </table>
 
-    <div class="readme-box">
+    <div class="readme-box" data-tut="repo-readme">
       <div class="readme-header">
         <svg class="octicon" width="16" height="16" aria-hidden="true"><use href="#icon-book"/></svg>
         <span>README.md</span>
@@ -1703,6 +1886,63 @@
         <p style="color: var(--fg-default)">A starter repo for the GitHub collaboration workshop. Fork it, branch off, and open your first pull request.</p>
         <p style="color: var(--fg-muted)">No content here yet. Be the first to push something useful.</p>
       </div>
+    </div>
+
+      </div>
+
+      <aside class="repo-sidebar">
+        <div class="sidebar-section" data-tut="repo-about">
+          <div class="sb-title">About</div>
+          <p class="about-desc">A starter repo for the GitHub collaboration workshop.</p>
+          <div class="topic-list">
+            <span class="topic-pill">git</span>
+            <span class="topic-pill">tutorial</span>
+            <span class="topic-pill">education</span>
+          </div>
+          <div class="about-row">
+            <svg class="octicon" width="16" height="16" aria-hidden="true"><use href="#icon-link"/></svg>
+            <a href="#">github.com/xing0325/vibe-coding-class</a>
+          </div>
+          <div class="about-row">
+            <svg class="octicon" width="16" height="16" aria-hidden="true"><use href="#icon-book"/></svg>
+            <span>Readme</span>
+          </div>
+          <div class="about-row">
+            <svg class="octicon" width="16" height="16" aria-hidden="true"><use href="#icon-shield"/></svg>
+            <span>MIT license</span>
+          </div>
+          <div class="about-row">
+            <svg class="octicon" width="16" height="16" aria-hidden="true"><use href="#icon-star"/></svg>
+            <span><strong style="color:var(--fg-default)">2</strong> stars</span>
+          </div>
+          <div class="about-row">
+            <svg class="octicon" width="16" height="16" aria-hidden="true"><use href="#icon-eye"/></svg>
+            <span><strong style="color:var(--fg-default)">1</strong> watching</span>
+          </div>
+          <div class="about-row">
+            <svg class="octicon" width="16" height="16" aria-hidden="true"><use href="#icon-repo-forked"/></svg>
+            <span><strong style="color:var(--fg-default)">0</strong> forks</span>
+          </div>
+        </div>
+
+        <div class="sidebar-section" data-tut="repo-releases">
+          <div class="sb-title">Releases</div>
+          <div class="release-row" id="release-row" role="button" aria-expanded="false" tabindex="0">
+            <svg class="octicon" width="16" height="16" aria-hidden="true"><use href="#icon-tag"/></svg>
+            <span class="release-tag">v1.0.0</span>
+            <span class="latest-badge">Latest</span>
+            <span class="release-date">on 2026-05-20</span>
+          </div>
+          <div class="release-detail" id="release-detail">
+            <div class="ver">v1.0.0</div>
+            <ul>
+              <li>首次发布</li>
+              <li>加入 README</li>
+              <li>修复若干问题</li>
+            </ul>
+          </div>
+        </div>
+      </aside>
     </div>
   </main>
 
@@ -2255,7 +2495,7 @@
     </div>
 
     <nav class="pr-tabs">
-      <a class="pr-tab active" href="#pr-detail">
+      <a class="pr-tab active" href="#pr-detail" id="pr-tab-conversation" data-tut="conversation-tab">
         <svg class="octicon" width="16" height="16" aria-hidden="true"><use href="#icon-comment-discussion"/></svg>
         Conversation <span class="counter">0</span>
       </a>
@@ -2267,13 +2507,35 @@
         <svg class="octicon" width="16" height="16" aria-hidden="true"><use href="#icon-check"/></svg>
         Checks <span class="counter">0</span>
       </a>
-      <a class="pr-tab" href="#pr-detail" data-tut="files-changed-tab">
+      <a class="pr-tab" href="#pr-detail" id="pr-tab-files" data-tut="files-changed-tab">
         <svg class="octicon" width="16" height="16" aria-hidden="true"><use href="#icon-file"/></svg>
         Files changed <span class="counter">1</span>
       </a>
     </nav>
 
-    <div class="two-col">
+    <!-- Files changed view (toggled by the Files changed / Conversation tabs) -->
+    <div id="pr-files-view">
+      <div class="compare-head">
+        <span>Showing <strong style="color:var(--fg-default)">1 changed file</strong> with</span>
+        <span class="diff-stat-add">1 addition</span>
+        <span>and 0 deletions.</span>
+      </div>
+      <div class="diff-box">
+        <div class="diff-header">
+          <svg class="octicon" width="16" height="16" aria-hidden="true"><use href="#icon-file"/></svg>
+          <span>README.md</span>
+          <span style="margin-left:auto;" class="diff-stat-add">+1</span>
+        </div>
+        <div class="diff-body">
+          <div class="diff-line context"><span class="ln">1</span><span class="code"># vibe-coding-class</span></div>
+          <div class="diff-line context"><span class="ln">2</span><span class="code"></span></div>
+          <div class="diff-line context"><span class="ln">3</span><span class="code">A starter repo for the GitHub collaboration workshop.</span></div>
+          <div class="diff-line add"><span class="ln">4</span><span class="code">hello world</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="two-col" id="pr-conversation-view">
       <div>
         <div class="comment-thread">
           <div class="comment">
@@ -2949,6 +3211,109 @@
                 if (cb.value === 'xing0325') toast('✅ 你认领了这个 issue');
                 else toast('🔔 已 @ ' + cb.value + ' 来看这个 issue');
               }
+            });
+          });
+        }
+
+        // --- Code 按钮：展开 clone 面板 + 复制地址 ---
+        var cloneBtn = document.getElementById('code-clone-btn');
+        var clonePanel = document.getElementById('clone-panel');
+        if (cloneBtn && clonePanel) {
+          cloneBtn.addEventListener('click', function (e) {
+            e.preventDefault();
+            e.stopPropagation();
+            var open = clonePanel.classList.toggle('open');
+            cloneBtn.setAttribute('aria-expanded', open ? 'true' : 'false');
+          });
+          // 点空白处关闭
+          document.addEventListener('click', function (e) {
+            if (!clonePanel.classList.contains('open')) return;
+            if (cloneBtn.contains(e.target) || clonePanel.contains(e.target)) return;
+            clonePanel.classList.remove('open');
+            cloneBtn.setAttribute('aria-expanded', 'false');
+          });
+          var copyBtn = document.getElementById('clone-copy-btn');
+          var cloneInput = document.getElementById('clone-url-input');
+          if (copyBtn && cloneInput) {
+            copyBtn.addEventListener('click', function () {
+              var label = copyBtn.querySelector('.clone-copy-label');
+              function showCopied() {
+                copyBtn.classList.add('copied');
+                if (label) label.textContent = '✓ 已复制';
+                setTimeout(function () {
+                  copyBtn.classList.remove('copied');
+                  if (label) label.textContent = '复制';
+                }, 1600);
+              }
+              var done = false;
+              if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(cloneInput.value).then(showCopied, function () {
+                  cloneInput.select(); document.execCommand && document.execCommand('copy'); showCopied();
+                });
+                done = true;
+              }
+              if (!done) {
+                cloneInput.select();
+                try { document.execCommand('copy'); } catch (err) {}
+                showCopied();
+              }
+            });
+          }
+        }
+
+        // --- Fork 按钮：显示已 fork 反馈 ---
+        var forkBtn = document.getElementById('repo-fork-btn');
+        if (forkBtn) forkBtn.addEventListener('click', function () {
+          toast('✅ 已 fork 到 your-name/vibe-coding-class');
+        });
+
+        // --- Releases 模块：点击展开 changelog ---
+        var releaseRow = document.getElementById('release-row');
+        var releaseDetail = document.getElementById('release-detail');
+        if (releaseRow && releaseDetail) {
+          function toggleRelease() {
+            var open = releaseDetail.classList.toggle('open');
+            releaseRow.setAttribute('aria-expanded', open ? 'true' : 'false');
+          }
+          releaseRow.addEventListener('click', toggleRelease);
+          releaseRow.addEventListener('keydown', function (e) {
+            if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggleRelease(); }
+          });
+        }
+
+        // --- PR 详情：Files changed / Conversation 真正的 tab 切换 ---
+        var tabConversation = document.getElementById('pr-tab-conversation');
+        var tabFiles = document.getElementById('pr-tab-files');
+        var convView = document.getElementById('pr-conversation-view');
+        var filesView = document.getElementById('pr-files-view');
+        if (tabFiles && convView && filesView) {
+          tabFiles.addEventListener('click', function (e) {
+            e.preventDefault();
+            filesView.style.display = 'block';
+            convView.style.display = 'none';
+            tabFiles.classList.add('active');
+            if (tabConversation) tabConversation.classList.remove('active');
+          });
+        }
+        if (tabConversation && convView && filesView) {
+          tabConversation.addEventListener('click', function (e) {
+            e.preventDefault();
+            filesView.style.display = 'none';
+            convView.style.display = 'grid';
+            tabConversation.classList.add('active');
+            if (tabFiles) tabFiles.classList.remove('active');
+          });
+        }
+
+        // --- Review：选中 Approve 行高亮 ---
+        var reviewOptionsBox = reviewBlock ? reviewBlock.querySelector('.review-options') : null;
+        if (reviewOptionsBox) {
+          var reviewRadios = reviewOptionsBox.querySelectorAll('input[type="radio"][name="review-type"]');
+          reviewRadios.forEach(function (radio) {
+            radio.addEventListener('change', function () {
+              reviewOptionsBox.querySelectorAll('label').forEach(function (lbl) {
+                lbl.classList.toggle('selected', lbl.contains(radio) && radio.checked);
+              });
             });
           });
         }

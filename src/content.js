@@ -674,5 +674,118 @@ const GLOSSARY = {
   });
 })();
 
+// ------------------------------------------------------------
+// 增量补丁 A：仓库页导览（spotlight 框选讲解）
+// 锚点：target === 'nav-code'（"仓库建好了"那步）。在它之后依次插入 7 步，
+// 把第8章「GitHub 仓库页导览」的几站转写成右侧仿真页的 spotlight 引导。
+// 全部 role:'system' / page:'repo' / aiPrompt:null / inputValidator:null。
+// ------------------------------------------------------------
+(function () {
+  var idx = -1;
+  for (var i = 0; i < STEPS.length; i++) { if (STEPS[i].target === 'nav-code') { idx = i; break; } }
+  if (idx === -1) return;
+  var anchorId = STEPS[idx].id;           // 锚点 step 的 id（先记下来）
+  var newSteps = [
+    {
+      role: 'system', page: 'repo', target: 'repo-file-list', nextOn: 'auto',
+      title: '区域①：文件列表',
+      body: '页面中间这张表，列着项目里的<strong>所有文件和文件夹</strong>。点任意一个文件就看里面的内容，点文件夹就钻进去看下一层。每行后面还跟着这个文件<strong>最后一次的 commit message</strong>和<strong>更新时间</strong>，扫一眼就知道它最近经历了啥。',
+      aiPrompt: null, inputValidator: null
+    },
+    {
+      role: 'system', page: 'repo', target: 'code-clone-btn', nextOn: 'click',
+      title: '区域②：绿色 Code 按钮',
+      body: '👉 点右上那个大绿按钮 <strong>Code</strong>，会弹出一个仓库地址。<strong>AI 时代怎么用</strong>：把这串地址丢给你的 coding agent，对它说一句「<code>帮我 clone 这个仓库</code>」，整个项目就下载到你电脑上了，立刻能开干。',
+      aiPrompt: null, inputValidator: null
+    },
+    {
+      role: 'system', page: 'repo', target: 'repo-readme', nextOn: 'auto',
+      title: '区域③：README',
+      body: '文件列表下面这一大块，是 <code>README.md</code>。GitHub 会<strong>自动读取并渲染</strong>它，不用你做任何事。README 是项目的<strong>门面</strong>——讲清这个项目是<strong>做什么用的、怎么用</strong>。看一个陌生项目，先读它就对了。',
+      aiPrompt: null, inputValidator: null
+    },
+    {
+      role: 'system', page: 'repo', target: 'repo-about', nextOn: 'auto',
+      title: '区域④：About',
+      body: '页面右上这张「一句话名片」就是 <strong>About</strong>：项目<strong>简介</strong>、几个 topics <strong>标签</strong>（像 education、ai，方便别人搜到），还有<strong>开源协议 License</strong>（比如 MIT，说明别人能怎么用你的代码）。想快速判断项目干啥的，扫一眼这里就够。',
+      aiPrompt: null, inputValidator: null
+    },
+    {
+      role: 'system', page: 'repo', target: 'repo-releases', nextOn: 'click',
+      title: '区域⑤：Releases',
+      body: '👉 点右侧的 <strong>Releases</strong> 卡片进去看看。这里是项目的<strong>版本发布</strong>记录——每发一个新版本就记一笔。点进某个版本，能看到它的<strong>版本号</strong>，以及这个版本<strong>更新了哪些内容（changelog）</strong>。',
+      aiPrompt: null, inputValidator: null
+    },
+    {
+      role: 'system', page: 'repo', target: 'repo-star', nextOn: 'auto',
+      title: '区域⑥：Star',
+      body: '右上的 <strong>★ Star</strong> 是程序员的「一键三连」——给项目<strong>点赞 + 收藏</strong>，表示喜欢。一个项目 Star 越多，说明它越受欢迎。逛 GitHub 看到好东西，顺手点个 Star 就对了。',
+      aiPrompt: null, inputValidator: null
+    },
+    {
+      role: 'system', page: 'repo', target: 'repo-fork', nextOn: 'click',
+      title: '区域⑦：Fork',
+      body: '👉 点旁边的 <strong>⑂ Fork</strong> 看看。Fork = 把这个项目<strong>原样复制一份到你自己名下</strong>，变成属于你的仓库。之后你随便 DIY、随便改，都<strong>动不到原作者一根毫毛</strong>。想参与别人的项目，第一步常常就是 fork。',
+      aiPrompt: null, inputValidator: null
+    }
+  ];
+  var N = newSteps.length;
+  // 1) 先把所有 id > 锚点id 的 step 整体 +N（腾出 anchorId+1 .. anchorId+N 的号段）
+  for (var j = 0; j < STEPS.length; j++) { if (STEPS[j].id > anchorId) STEPS[j].id += N; }
+  // 2) 给新步接续编号，splice 插到锚点后面
+  for (var k = 0; k < N; k++) { newSteps[k].id = anchorId + 1 + k; }
+  STEPS.splice.apply(STEPS, [idx + 1, 0].concat(newSteps));
+  // 3) PITFALLS.beforeStep > 锚点id 的同步 +N
+  for (var p = 0; p < PITFALLS.length; p++) { if (PITFALLS[p].beforeStep > anchorId) PITFALLS[p].beforeStep += N; }
+})();
+
+// ------------------------------------------------------------
+// 增量补丁 B：多人协作心法（旁白讲解卡片）
+// 锚点：target === 'compare-pr-banner'（"回 GitHub 看黄条"那步）。在它之前
+// 插入 4 个旁白步，把第9章「多人协作」的核心心法转写进来。
+// 全部 role:'system' / page:'ai' / target:null / nextOn:'auto' / aiPrompt:null。
+// 注意：锚点 index 在本 IIFE 内实时查（补丁 A 可能已改变数组）。
+// ------------------------------------------------------------
+(function () {
+  var idx = -1;
+  for (var i = 0; i < STEPS.length; i++) { if (STEPS[i].target === 'compare-pr-banner') { idx = i; break; } }
+  if (idx === -1) return;
+  var anchorId = STEPS[idx].id;           // 锚点 step 的 id
+  var narration = [
+    {
+      role: 'system', page: 'ai', target: null, nextOn: 'auto',
+      title: 'fork 模式 vs 协作者模式',
+      body: '参与协作有两种方式。想插手<strong>陌生人的开源项目</strong>，得先 <strong>fork</strong>（复刻一份到自己名下），在副本上改完再发 PR 交回去。但咱们这门课是<strong>熟人小团队</strong>——你早被仓库主人邀成<strong>协作者（collaborator）</strong>了，省掉 fork 这步，直接在同一个仓库里开分支干活。',
+      aiPrompt: null, inputValidator: null
+    },
+    {
+      role: 'system', page: 'ai', target: null, nextOn: 'auto',
+      title: '黄金法则：别在 main 上改',
+      body: '🛑 记死这条：<strong>永远别直接在 <span data-term="main">main</span> 上改代码！</strong>你改的同时上游 main 也在更新。只要你的改动都在<strong>分支</strong>上、main 保持纯净，从上游 pull 最新时 main 只需「<strong>快进 fast-forward</strong>」——零合并、零冲突。直接在 main 上改，就会撞三方合并、解冲突、历史变乱。',
+      aiPrompt: null, inputValidator: null
+    },
+    {
+      role: 'system', page: 'ai', target: null, nextOn: 'auto',
+      title: 'PR 的本质是「提案」',
+      body: '接下来你要发的 <span data-term="PR">PR</span>（Pull Request），<strong>不是直接把代码合进去</strong>，而是一个「<strong>请把我这条分支合进 main</strong>」的提案。你举手说「我写好了，请看看」，然后要经过<strong>code review（代码审核）</strong>——仓库主人逐行看过、点同意，才会真的合进 <span data-term="main">main</span>。被打回很正常，这是协作不是考试。',
+      aiPrompt: null, inputValidator: null
+    },
+    {
+      role: 'system', page: 'ai', target: null, nextOn: 'auto',
+      title: '彩蛋：cherry-pick 摘樱桃 🍒',
+      body: '再送你一招。当你<strong>只想要别的分支上某一个特定的 <span data-term="commit">commit</span></strong>、而不是整条分支时，用 <strong>cherry-pick</strong>：把那个 commit 的 <strong>hash</strong> 给 AI，说一句「<code>帮我 cherry-pick 这个提交</code>」，它就把那一颗「樱桃」摘到你当前分支末尾，其余提交一概不动。',
+      aiPrompt: null, inputValidator: null
+    }
+  ];
+  var N = narration.length;
+  // 1) 旁白插在锚点之前，新步占 anchorId .. anchorId+N-1，锚点及其后所有 id >= anchorId 的 +N
+  for (var j = 0; j < STEPS.length; j++) { if (STEPS[j].id >= anchorId) STEPS[j].id += N; }
+  // 2) 新步接续旧锚点 id（旧 anchorId 开始），splice 到锚点位置之前
+  for (var k = 0; k < N; k++) { narration[k].id = anchorId + k; }
+  STEPS.splice.apply(STEPS, [idx, 0].concat(narration));
+  // 3) PITFALLS.beforeStep >= 锚点id 的同步 +N（旁白插在它们之前，编号要一起后移）
+  for (var p = 0; p < PITFALLS.length; p++) { if (PITFALLS[p].beforeStep >= anchorId) PITFALLS[p].beforeStep += N; }
+})();
+
 // 暴露给引擎
 window.TUTORIAL_DATA = { STEPS, PITFALLS, GLOSSARY };

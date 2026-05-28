@@ -13,30 +13,35 @@
 
   var GOLD = '#e3b341';
 
-  // 复用：画一个 commit 圆点（白描边）+ 短 hash 文字
+  // 复用：画一个 commit 圆点（白描边 + 柔和发光）+ 短 hash 文字
   function commitDot(cx, cy, hash, opts) {
     opts = opts || {};
     var r = opts.r || 16;
     var fill = opts.fill || 'var(--course-accent)';
     var op = opts.ghost ? ' opacity="0.4"' : '';
     var dash = opts.ghost ? ' stroke-dasharray="4 3"' : '';
+    // 发光：虚影节点不发光，实节点用主题色柔光
+    var glow = opts.ghost
+      ? ''
+      : ' style="filter:drop-shadow(0 0 5px color-mix(in srgb,var(--course-accent) 75%,transparent))"';
     return (
       '<g' + op + '>' +
-        '<circle cx="' + cx + '" cy="' + cy + '" r="' + r + '" fill="' + fill + '" stroke="#fff" stroke-width="3"' + dash + '/>' +
+        '<circle cx="' + cx + '" cy="' + cy + '" r="' + r + '" fill="' + fill + '" stroke="#fff" stroke-width="3"' + dash + glow + '/>' +
         (hash ? '<text x="' + cx + '" y="' + (cy + r + 16) + '" text-anchor="middle" font-size="12" fill="var(--c-fg-muted)" font-family="ui-monospace,monospace">' + hash + '</text>' : '') +
       '</g>'
     );
   }
 
-  // 复用：分支 / HEAD 的 pill 标签
+  // 复用：分支 / HEAD 的 pill 标签（圆角 + 主题色描边 + 柔和发光）
   function branchPill(x, y, label, opts) {
     opts = opts || {};
     var w = opts.w || (label.length * 8 + 22);
     var fill = opts.head ? GOLD : 'var(--c-bg-soft)';
     var stroke = opts.head ? GOLD : 'var(--course-accent)';
     var tcolor = opts.head ? '#0d1117' : 'var(--c-fg)';
+    var glowColor = opts.head ? GOLD : 'var(--course-accent)';
     return (
-      '<g>' +
+      '<g style="filter:drop-shadow(0 0 5px color-mix(in srgb,' + glowColor + ' 55%,transparent))">' +
         '<rect x="' + x + '" y="' + y + '" width="' + w + '" height="22" rx="11" fill="' + fill + '" stroke="' + stroke + '" stroke-width="2"/>' +
         '<text x="' + (x + w / 2) + '" y="' + (y + 15) + '" text-anchor="middle" font-size="11" font-weight="700" fill="' + tcolor + '" font-family="ui-monospace,monospace">' + label + '</text>' +
       '</g>'
@@ -66,15 +71,15 @@
               '这一章的 <b style="color:var(--course-accent)">worktree</b> 更进一步——它是对你某个版本的' +
                 '<b>"一式两份 / 一式几份"</b>，而这几份可以<b>同时编辑</b>。</p>' +
               '<div class="c-worktree-copies" id="c-worktree-copies">' +
-                '<div class="c-worktree-copy" style="animation-delay:0ms">' +
+                '<div class="c-worktree-copy">' +
                   '<div class="c-worktree-win-bar"><span></span><span></span><span></span></div>' +
                   '<div class="c-worktree-win-body">📁 副本①<br><span class="c-worktree-edit">✏️ 正在改</span></div>' +
                 '</div>' +
-                '<div class="c-worktree-copy" style="animation-delay:140ms">' +
+                '<div class="c-worktree-copy">' +
                   '<div class="c-worktree-win-bar"><span></span><span></span><span></span></div>' +
                   '<div class="c-worktree-win-body">📁 副本②<br><span class="c-worktree-edit">✏️ 也在改</span></div>' +
                 '</div>' +
-                '<div class="c-worktree-copy" style="animation-delay:280ms">' +
+                '<div class="c-worktree-copy">' +
                   '<div class="c-worktree-win-bar"><span></span><span></span><span></span></div>' +
                   '<div class="c-worktree-win-body">📁 副本③<br><span class="c-worktree-edit">✏️ 同时改</span></div>' +
                 '</div>' +
@@ -86,13 +91,17 @@
             '</div>' +
             '<style>' +
             '.c-worktree-copies{display:flex;justify-content:center;flex-wrap:wrap;gap:18px;margin:30px 0 8px;}' +
-            '.c-worktree-copy{width:150px;border-radius:12px;overflow:hidden;background:var(--c-bg-card);border:1px solid var(--c-border);box-shadow:0 8px 22px rgba(0,0,0,.3);animation:c-worktree-rise .5s both cubic-bezier(.34,1.56,.64,1);}' +
+            '.c-worktree-copy{width:150px;border-radius:13px;overflow:hidden;background:linear-gradient(160deg,var(--c-bg-card),color-mix(in srgb,var(--c-bg-card) 72%,#000));border:1px solid color-mix(in srgb,var(--course-accent) 25%,var(--c-border));box-shadow:0 8px 22px rgba(0,0,0,.4),0 0 26px color-mix(in srgb,var(--course-accent) 10%,transparent);animation:c-worktree-rise .5s both cubic-bezier(.34,1.56,.64,1),c-worktree-bob 4.2s ease-in-out infinite;}' +
+            '.c-worktree-copy:nth-child(2){animation:c-worktree-rise .5s .14s both cubic-bezier(.34,1.56,.64,1),c-worktree-bob 4.2s .6s ease-in-out infinite;}' +
+            '.c-worktree-copy:nth-child(3){animation:c-worktree-rise .5s .28s both cubic-bezier(.34,1.56,.64,1),c-worktree-bob 4.2s 1.2s ease-in-out infinite;}' +
+            '.c-worktree-copy:hover{border-color:var(--course-accent);box-shadow:0 10px 28px rgba(0,0,0,.45),0 0 30px color-mix(in srgb,var(--course-accent) 22%,transparent);}' +
             '.c-worktree-win-bar{display:flex;gap:5px;padding:8px 10px;background:var(--c-bg-soft);border-bottom:1px solid var(--c-border);}' +
             '.c-worktree-win-bar span{width:9px;height:9px;border-radius:50%;background:var(--c-fg-muted);opacity:.5;}' +
-            '.c-worktree-win-bar span:first-child{background:var(--course-accent);opacity:1;}' +
+            '.c-worktree-win-bar span:first-child{background:var(--course-accent);opacity:1;box-shadow:0 0 7px var(--course-accent);}' +
             '.c-worktree-win-body{padding:20px 12px;text-align:center;font-size:26px;line-height:1.5;}' +
             '.c-worktree-edit{font-size:12px;color:var(--course-accent);font-weight:600;}' +
             '@keyframes c-worktree-rise{from{opacity:0;transform:translateY(16px) scale(.95)}to{opacity:1;transform:none}}' +
+            '@keyframes c-worktree-bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-6px)}}' +
             '</style>';
         }
       },
@@ -105,7 +114,7 @@
           var leftSvg =
             '<svg class="c-worktree-cmp-svg" viewBox="0 0 240 220" width="100%" aria-hidden="true">' +
               // 仓库外框
-              '<rect x="14" y="14" width="212" height="192" rx="14" fill="var(--c-bg-soft)" stroke="var(--c-border)" stroke-width="2"/>' +
+              '<rect x="14" y="14" width="212" height="192" rx="16" fill="var(--c-bg-soft)" stroke="color-mix(in srgb,var(--course-accent) 30%,var(--c-border))" stroke-width="2"/>' +
               '<text x="120" y="36" text-anchor="middle" font-size="12" fill="var(--c-fg-muted)">同一个工作目录</text>' +
               // 主干
               '<line x1="50" y1="170" x2="50" y2="80" stroke="var(--course-accent)" stroke-width="4"/>' +
@@ -126,21 +135,21 @@
           var rightSvg =
             '<svg class="c-worktree-cmp-svg" viewBox="0 0 240 220" width="100%" aria-hidden="true">' +
               // 三个并排窗口
-              '<g>' +
-                '<rect x="10"  y="40" width="64" height="120" rx="10" fill="var(--c-bg-card)" stroke="var(--course-accent)" stroke-width="2"/>' +
-                '<rect x="10"  y="40" width="64" height="20" rx="10" fill="var(--c-bg-soft)"/>' +
+              '<g style="filter:drop-shadow(0 0 6px color-mix(in srgb,var(--course-accent) 40%,transparent))">' +
+                '<rect x="10"  y="40" width="64" height="120" rx="11" fill="var(--c-bg-card)" stroke="var(--course-accent)" stroke-width="2"/>' +
+                '<rect x="10"  y="40" width="64" height="20" rx="11" fill="var(--c-bg-soft)"/>' +
                 '<text x="42"  y="100" text-anchor="middle" font-size="22">📁</text>' +
                 '<text x="42"  y="130" text-anchor="middle" font-size="10" fill="var(--c-fg-muted)" font-family="ui-monospace,monospace">main</text>' +
               '</g>' +
-              '<g>' +
-                '<rect x="88"  y="40" width="64" height="120" rx="10" fill="var(--c-bg-card)" stroke="var(--course-accent)" stroke-width="2"/>' +
-                '<rect x="88"  y="40" width="64" height="20" rx="10" fill="var(--c-bg-soft)"/>' +
+              '<g style="filter:drop-shadow(0 0 6px color-mix(in srgb,var(--course-accent) 40%,transparent))">' +
+                '<rect x="88"  y="40" width="64" height="120" rx="11" fill="var(--c-bg-card)" stroke="var(--course-accent)" stroke-width="2"/>' +
+                '<rect x="88"  y="40" width="64" height="20" rx="11" fill="var(--c-bg-soft)"/>' +
                 '<text x="120" y="100" text-anchor="middle" font-size="22">📁</text>' +
                 '<text x="120" y="130" text-anchor="middle" font-size="10" fill="var(--c-fg-muted)" font-family="ui-monospace,monospace">feat</text>' +
               '</g>' +
-              '<g>' +
-                '<rect x="166" y="40" width="64" height="120" rx="10" fill="var(--c-bg-card)" stroke="var(--course-accent)" stroke-width="2"/>' +
-                '<rect x="166" y="40" width="64" height="20" rx="10" fill="var(--c-bg-soft)"/>' +
+              '<g style="filter:drop-shadow(0 0 6px color-mix(in srgb,var(--course-accent) 40%,transparent))">' +
+                '<rect x="166" y="40" width="64" height="120" rx="11" fill="var(--c-bg-card)" stroke="var(--course-accent)" stroke-width="2"/>' +
+                '<rect x="166" y="40" width="64" height="20" rx="11" fill="var(--c-bg-soft)"/>' +
                 '<text x="198" y="100" text-anchor="middle" font-size="22">📁</text>' +
                 '<text x="198" y="130" text-anchor="middle" font-size="10" fill="var(--c-fg-muted)" font-family="ui-monospace,monospace">fix</text>' +
               '</g>' +
@@ -190,30 +199,42 @@
             '<svg class="c-worktree-proj-svg" viewBox="0 0 560 260" width="100%" aria-hidden="true">' +
               '<defs>' +
                 '<marker id="c-worktree-pm" markerWidth="9" markerHeight="9" refX="2" refY="4.5" orient="auto">' +
-                  '<path d="M9,0 L0,4.5 L9,9 Z" fill="var(--course-accent)" opacity="0.7"/>' +
+                  '<path d="M9,0 L0,4.5 L9,9 Z" fill="var(--course-accent)" opacity="0.8"/>' +
                 '</marker>' +
+                // 仓库本体的发光辐射
+                '<radialGradient id="c-worktree-hub" cx="50%" cy="50%" r="50%">' +
+                  '<stop offset="0%" stop-color="var(--course-accent)" stop-opacity="0.32"/>' +
+                  '<stop offset="100%" stop-color="var(--course-accent)" stop-opacity="0"/>' +
+                '</radialGradient>' +
               '</defs>' +
+              // 中央光晕
+              '<circle cx="280" cy="132" r="92" fill="url(#c-worktree-hub)" class="c-worktree-hubglow"/>' +
               // 中央：仓库本体（唯一的对象库）
-              '<rect x="218" y="86" width="124" height="92" rx="14" fill="var(--c-bg-soft)" stroke="var(--course-accent)" stroke-width="3"/>' +
+              '<rect x="218" y="86" width="124" height="92" rx="16" fill="var(--c-bg-soft)" stroke="var(--course-accent)" stroke-width="3" style="filter:drop-shadow(0 0 10px color-mix(in srgb,var(--course-accent) 65%,transparent))"/>' +
               '<text x="280" y="120" text-anchor="middle" font-size="30">🗃️</text>' +
               '<text x="280" y="146" text-anchor="middle" font-size="12" fill="var(--c-fg)" font-weight="700">仓库本体</text>' +
               '<text x="280" y="164" text-anchor="middle" font-size="10" fill="var(--c-fg-muted)" font-family="ui-monospace,monospace">同一套对象库</text>' +
               // 三个"视窗 / 投影"框对着它（虚线，半透明，像投影）
-              '<g stroke="var(--course-accent)" stroke-width="2" stroke-dasharray="6 4" fill="var(--c-bg-card)" opacity="0.85">' +
-                '<rect x="30"  y="20"  width="100" height="60" rx="8"/>' +
-                '<rect x="30"  y="180" width="100" height="60" rx="8"/>' +
-                '<rect x="430" y="100" width="100" height="60" rx="8"/>' +
+              '<g stroke="var(--course-accent)" stroke-width="2" stroke-dasharray="6 4" fill="var(--c-bg-card)" opacity="0.9">' +
+                '<rect x="30"  y="20"  width="100" height="60" rx="9"/>' +
+                '<rect x="30"  y="180" width="100" height="60" rx="9"/>' +
+                '<rect x="430" y="100" width="100" height="60" rx="9"/>' +
               '</g>' +
               '<g font-size="11" fill="var(--c-fg-muted)" text-anchor="middle">' +
                 '<text x="80"  y="44">🪟 视窗 A</text><text x="80"  y="62" font-family="ui-monospace,monospace">worktree</text>' +
                 '<text x="80"  y="204">🪟 视窗 B</text><text x="80" y="222" font-family="ui-monospace,monospace">worktree</text>' +
                 '<text x="480" y="124">🪟 视窗 C</text><text x="480" y="142" font-family="ui-monospace,monospace">worktree</text>' +
               '</g>' +
-              // 投影连线（从仓库射向各视窗）
-              '<g stroke="var(--course-accent)" stroke-width="2" fill="none" opacity="0.6" stroke-dasharray="4 4" marker-end="url(#c-worktree-pm)">' +
+              // 投影连线（从仓库射向各视窗）——光束底色 + 流动高光
+              '<g stroke="var(--course-accent)" stroke-width="2.4" fill="none" opacity="0.55" stroke-linecap="round" marker-end="url(#c-worktree-pm)">' +
                 '<path d="M218,110 C170,80 130,60 132,52"/>' +
                 '<path d="M218,154 C170,180 130,200 132,208"/>' +
                 '<path d="M342,132 C390,128 420,130 428,130"/>' +
+              '</g>' +
+              '<g stroke="var(--course-accent)" stroke-width="2.4" fill="none" stroke-linecap="round" class="c-worktree-beam">' +
+                '<path d="M218,110 C170,80 130,60 132,52"/>' +
+                '<path d="M218,154 C170,180 130,200 132,208" style="animation-delay:.4s"/>' +
+                '<path d="M342,132 C390,128 420,130 428,130" style="animation-delay:.8s"/>' +
               '</g>' +
             '</svg>';
 
@@ -233,7 +254,11 @@
             '.c-worktree-bigwarn{font-size:16px;line-height:1.7;text-align:left;}' +
             '.c-worktree-proj-svg{display:block;margin:18px auto 6px;max-width:560px;}' +
             '.c-worktree-proj-svg rect[stroke-dasharray]{animation:c-worktree-pulse 2.4s ease-in-out infinite;}' +
-            '@keyframes c-worktree-pulse{0%,100%{opacity:.7}50%{opacity:1}}' +
+            '@keyframes c-worktree-pulse{0%,100%{opacity:.72}50%{opacity:1}}' +
+            '.c-worktree-hubglow{transform-box:fill-box;transform-origin:center;animation:c-worktree-hubbreathe 3.6s ease-in-out infinite;}' +
+            '@keyframes c-worktree-hubbreathe{0%,100%{opacity:.55;transform:scale(.9)}50%{opacity:1;transform:scale(1.08)}}' +
+            '.c-worktree-beam path{stroke-dasharray:14 70;animation:c-worktree-flow 2.2s linear infinite;}' +
+            '@keyframes c-worktree-flow{from{stroke-dashoffset:84}to{stroke-dashoffset:0}}' +
             '.c-worktree-proj-note{max-width:600px;margin:6px auto 0;text-align:left;}' +
             '</style>';
         }
@@ -286,8 +311,8 @@
             '.c-worktree-q,.c-worktree-a{display:flex;gap:12px;align-items:flex-start;}' +
             '.c-worktree-q p{margin:0;font-size:16px;font-weight:600;line-height:1.6;}' +
             '.c-worktree-tag{flex:none;width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:15px;}' +
-            '.c-worktree-tag-q{background:var(--course-accent-soft);color:var(--course-accent);}' +
-            '.c-worktree-tag-a{background:rgba(63,185,80,.16);color:#3fb950;}' +
+            '.c-worktree-tag-q{background:var(--course-accent-soft);color:var(--course-accent);box-shadow:0 0 14px color-mix(in srgb,var(--course-accent) 25%,transparent);}' +
+            '.c-worktree-tag-a{background:rgba(63,185,80,.16);color:#3fb950;box-shadow:0 0 14px rgba(63,185,80,.22);}' +
             '#c-worktree-revealA{margin:18px 0;}' +
             '.c-worktree-a{animation:c-worktree-pop .45s cubic-bezier(.34,1.56,.64,1);}' +
             '@keyframes c-worktree-pop{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:none}}' +
@@ -338,7 +363,7 @@
             '<style>' +
             '.c-worktree-uses{grid-template-columns:repeat(3,1fr);max-width:660px;margin:22px auto 0;}' +
             '.c-worktree-use{text-align:center;}' +
-            '.c-worktree-use-ico{font-size:30px;line-height:1;margin-bottom:8px;}' +
+            '.c-worktree-use-ico{font-size:30px;line-height:1;margin-bottom:8px;filter:drop-shadow(0 0 7px color-mix(in srgb,var(--course-accent) 45%,transparent));}' +
             '.c-worktree-use-h{font-weight:700;color:var(--c-fg);margin-bottom:6px;font-size:14px;}' +
             '@media(max-width:640px){.c-worktree-uses{grid-template-columns:1fr;}}' +
             '</style>';
@@ -360,19 +385,19 @@
               commitDot(70, 120, 'p0', { r: 16 }) +
               '<text x="70" y="92" text-anchor="middle" font-size="11" fill="var(--c-fg-muted)">共同的父节点</text>' +
               // 上岔（小C）
-              '<path d="M86,114 C150,90 200,70 250,64" fill="none" stroke="var(--course-accent)" stroke-width="4"/>' +
+              '<path d="M86,114 C150,90 200,70 250,64" fill="none" stroke="var(--course-accent)" stroke-width="4" stroke-linecap="round"/>' +
               commitDot(250, 60, 'c1', { r: 15 }) +
               '<text x="250" y="36" text-anchor="middle" font-size="11" fill="var(--course-accent)" font-weight="700">改了同一行</text>' +
               // 下岔（小D）
-              '<path d="M86,126 C150,150 200,170 250,176" fill="none" stroke="var(--course-accent)" stroke-width="4"/>' +
+              '<path d="M86,126 C150,150 200,170 250,176" fill="none" stroke="var(--course-accent)" stroke-width="4" stroke-linecap="round"/>' +
               commitDot(250, 180, 'd1', { r: 15 }) +
               '<text x="250" y="214" text-anchor="middle" font-size="11" fill="var(--course-accent)" font-weight="700">也改了同一行</text>' +
               // merge 汇合，红色闪电
-              '<path d="M266,60 C330,72 370,100 392,116" fill="none" stroke="#f85149" stroke-width="4" stroke-dasharray="6 4"/>' +
-              '<path d="M266,180 C330,168 370,140 392,124" fill="none" stroke="#f85149" stroke-width="4" stroke-dasharray="6 4"/>' +
-              '<circle cx="408" cy="120" r="22" fill="rgba(248,81,73,.14)" stroke="#f85149" stroke-width="2"/>' +
+              '<path d="M266,60 C330,72 370,100 392,116" fill="none" stroke="#f85149" stroke-width="4" stroke-linecap="round" stroke-dasharray="6 4" style="filter:drop-shadow(0 0 4px rgba(248,81,73,.6))"/>' +
+              '<path d="M266,180 C330,168 370,140 392,124" fill="none" stroke="#f85149" stroke-width="4" stroke-linecap="round" stroke-dasharray="6 4" style="filter:drop-shadow(0 0 4px rgba(248,81,73,.6))"/>' +
+              '<circle cx="408" cy="120" r="22" fill="rgba(248,81,73,.18)" stroke="#f85149" stroke-width="2.4" style="filter:drop-shadow(0 0 9px rgba(248,81,73,.75))"/>' +
               '<text x="408" y="129" text-anchor="middle" font-size="24">⚡</text>' +
-              '<text x="408" y="166" text-anchor="middle" font-size="12" fill="#f85149" font-weight="700">CONFLICT</text>' +
+              '<text x="408" y="166" text-anchor="middle" font-size="12" fill="#f85149" font-weight="700" style="filter:drop-shadow(0 0 6px rgba(248,81,73,.6))">CONFLICT</text>' +
             '</svg>';
 
           stage.innerHTML =
@@ -427,15 +452,15 @@
             '<style>' +
             '.c-worktree-dev{grid-template-columns:1fr 1fr;max-width:600px;margin:18px auto;gap:16px;}' +
             '.c-worktree-dev-name{font-weight:700;margin-bottom:6px;}' +
-            '.c-worktree-file{max-width:560px;margin:18px auto 0;border:1px solid var(--c-border);border-radius:12px;overflow:hidden;background:var(--c-bg-card);font-family:ui-monospace,monospace;}' +
+            '.c-worktree-file{max-width:560px;margin:18px auto 0;border:1px solid var(--c-border);border-radius:13px;overflow:hidden;background:linear-gradient(160deg,var(--c-bg-card),color-mix(in srgb,var(--c-bg-card) 75%,#000));font-family:ui-monospace,monospace;box-shadow:0 8px 24px rgba(0,0,0,.3);}' +
             '.c-worktree-file-bar{padding:9px 14px;background:var(--c-bg-soft);border-bottom:1px solid var(--c-border);font-size:12px;color:var(--c-fg-muted);}' +
             '.c-worktree-line{display:flex;gap:10px;align-items:center;padding:11px 14px;font-size:13px;border-bottom:1px solid var(--c-border);}' +
             '.c-worktree-line:last-child{border-bottom:none;}' +
             '.c-worktree-line span{flex:none;font-family:initial;}' +
             '.c-worktree-ok{color:var(--c-fg-muted);}' +
             '.c-worktree-ok span{color:#3fb950;}' +
-            '.c-worktree-clash{color:var(--c-fg);font-weight:700;background:rgba(248,81,73,.1);}' +
-            '.c-worktree-clash span{color:#f85149;}' +
+            '.c-worktree-clash{color:var(--c-fg);font-weight:700;background:rgba(248,81,73,.12);border-left:3px solid #f85149;box-shadow:inset 0 0 22px rgba(248,81,73,.1);}' +
+            '.c-worktree-clash span{color:#f85149;filter:drop-shadow(0 0 5px rgba(248,81,73,.6));}' +
             '@media(max-width:640px){.c-worktree-dev{grid-template-columns:1fr;}}' +
             '</style>';
         }
@@ -473,11 +498,11 @@
             '</div>' +
             '<style>' +
             '.c-worktree-pick{display:flex;flex-wrap:wrap;justify-content:center;gap:12px;margin:24px 0 4px;}' +
-            '.c-worktree-opt{cursor:pointer;font-family:inherit;font-size:14px;color:var(--c-fg);background:var(--c-bg-card);border:2px solid var(--c-border);border-radius:14px;padding:16px 18px;min-width:150px;transition:all .25s cubic-bezier(.34,1.56,.64,1);}' +
-            '.c-worktree-opt:hover{border-color:var(--course-accent);transform:translateY(-3px);box-shadow:0 12px 26px rgba(0,0,0,.3);}' +
-            '.c-worktree-opt.chosen{border-color:var(--course-accent);background:var(--course-accent-soft);box-shadow:0 0 0 3px var(--course-accent-soft);}' +
+            '.c-worktree-opt{cursor:pointer;font-family:inherit;font-size:14px;color:var(--c-fg);background:linear-gradient(160deg,var(--c-bg-card),color-mix(in srgb,var(--c-bg-card) 75%,#000));border:2px solid var(--c-border);border-radius:15px;padding:16px 18px;min-width:150px;transition:all .25s cubic-bezier(.34,1.56,.64,1);}' +
+            '.c-worktree-opt:hover{border-color:var(--course-accent);transform:translateY(-3px);box-shadow:0 12px 26px rgba(0,0,0,.3),0 0 22px color-mix(in srgb,var(--course-accent) 18%,transparent);}' +
+            '.c-worktree-opt.chosen{border-color:var(--course-accent);background:var(--course-accent-soft);box-shadow:0 0 0 3px var(--course-accent-soft),0 0 26px color-mix(in srgb,var(--course-accent) 30%,transparent);}' +
             '.c-worktree-opt.faded{opacity:.4;}' +
-            '.c-worktree-opt-ico{font-size:26px;margin-bottom:6px;}' +
+            '.c-worktree-opt-ico{font-size:26px;margin-bottom:6px;filter:drop-shadow(0 0 6px color-mix(in srgb,var(--course-accent) 40%,transparent));}' +
             '.c-worktree-picked{margin:6px 0 4px;}' +
             '.c-worktree-ai{text-align:left;max-width:600px;margin:22px auto 0;}' +
             '.c-worktree-ai-h{font-weight:700;margin-bottom:8px;color:var(--c-fg);}' +
@@ -526,7 +551,7 @@
                 '<b>最后一章</b>掀开盖子——看看这一切背后那套优雅到会让人"哇"的<b style="color:var(--course-accent)">数学骨架</b>。</p>' +
             '</div>' +
             '<style>' +
-            '.c-worktree-sum-emoji{font-size:46px;letter-spacing:6px;margin:6px 0 12px;}' +
+            '.c-worktree-sum-emoji{font-size:46px;letter-spacing:6px;margin:6px 0 12px;filter:drop-shadow(0 0 12px color-mix(in srgb,var(--course-accent) 50%,transparent));}' +
             '.c-worktree-sum{grid-template-columns:1fr 1fr;max-width:640px;margin:22px auto;gap:16px;}' +
             '.c-worktree-sum-h{font-weight:700;margin-bottom:6px;color:var(--c-fg);}' +
             '@media(max-width:640px){.c-worktree-sum{grid-template-columns:1fr;}}' +

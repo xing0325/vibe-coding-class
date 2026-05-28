@@ -34,13 +34,26 @@
     var color = o.ghost ? CLR.ghost : (o.color || CLR.main);
     var fill = o.ghost ? 'var(--c-bg-soft)' : color;
     var dash = o.ghost ? ' stroke-dasharray="4 3"' : '';
-    var op = o.ghost ? ' opacity="0.55"' : '';
-    var s = '<g' + op + '>';
+    var op = o.ghost ? ' opacity="0.6"' : '';
+    // 发光：星图节点感。健康节点用对应色发光，孤儿/丢弃节点灰色弱发光。
+    var glow = o.ghost ? 'c-branch-glow-ghost' : glowIdFor(color);
+    var s = '<g class="c-branch-node' + (o.ghost ? ' is-ghost' : '') + '"' + op + '>';
+    // 外层柔光晕环（更弥散，像星点的 halo）
+    if (!o.ghost) {
+      s += '<circle cx="' + o.x + '" cy="' + o.y + '" r="' + (r + 4) + '" fill="' + color +
+           '" opacity="0.16" filter="url(#' + glow + ')"/>';
+    }
     s += '<circle cx="' + o.x + '" cy="' + o.y + '" r="' + r + '" fill="' + fill +
-         '" stroke="' + (o.ghost ? CLR.ghost : '#fff') + '" stroke-width="3"' + dash + '/>';
+         '" stroke="' + (o.ghost ? CLR.ghost : '#fff') + '" stroke-width="2"' + dash +
+         ' filter="url(#' + glow + ')"/>';
+    // 内层高光点，给圆点一点立体/玻璃感
+    if (!o.ghost) {
+      s += '<circle cx="' + (o.x - r * 0.3) + '" cy="' + (o.y - r * 0.34) + '" r="' + (r * 0.32) +
+           '" fill="#fff" opacity="0.32"/>';
+    }
     if (o.hash) {
       s += '<text x="' + o.x + '" y="' + (o.y + (o.hashBelow === false ? -r - 10 : r + 18)) +
-           '" text-anchor="middle" font-size="12" font-family="ui-monospace,monospace" fill="var(--c-fg-muted)">' +
+           '" text-anchor="middle" font-size="12" font-family="ui-monospace,monospace" letter-spacing="0.5" fill="var(--c-fg-muted)">' +
            o.hash + '</text>';
     }
     if (o.inner) {
@@ -50,33 +63,69 @@
     return s;
   }
 
-  // 连线（两点之间）
+  // 把颜色映射到 defs 里对应的发光 filter id（避免每个节点都重定义滤镜）
+  function glowIdFor(color) {
+    switch (color) {
+      case CLR.main: return 'c-branch-glow-main';
+      case CLR.feature: return 'c-branch-glow-feature';
+      case CLR.feature2: return 'c-branch-glow-feature2';
+      case CLR.revert: return 'c-branch-glow-revert';
+      case CLR.head: return 'c-branch-glow-head';
+      default: return 'c-branch-glow-main';
+    }
+  }
+
+  // 连线（两点之间）—— 星座连线感：发光底线 + 实线，圆头
   function link(x1, y1, x2, y2, color, ghost) {
-    var dash = ghost ? ' stroke-dasharray="5 4"' : '';
-    var op = ghost ? ' opacity="0.5"' : '';
-    return '<line x1="' + x1 + '" y1="' + y1 + '" x2="' + x2 + '" y2="' + y2 +
-      '" stroke="' + (ghost ? CLR.ghost : color) + '" stroke-width="5" stroke-linecap="round"' + dash + op + '/>';
+    if (ghost) {
+      return '<line x1="' + x1 + '" y1="' + y1 + '" x2="' + x2 + '" y2="' + y2 +
+        '" stroke="' + CLR.ghost + '" stroke-width="2.6" stroke-linecap="round"' +
+        ' stroke-dasharray="5 5" opacity="0.5"/>';
+    }
+    var glow = glowIdFor(color);
+    // 底层发光描边
+    var s = '<line x1="' + x1 + '" y1="' + y1 + '" x2="' + x2 + '" y2="' + y2 +
+      '" stroke="' + color + '" stroke-width="6" stroke-linecap="round" opacity="0.28" filter="url(#' + glow + ')"/>';
+    // 主连线
+    s += '<line x1="' + x1 + '" y1="' + y1 + '" x2="' + x2 + '" y2="' + y2 +
+      '" stroke="' + color + '" stroke-width="3" stroke-linecap="round"/>';
+    return s;
   }
 
   // 分支 pill 标签 + 指向短线
   // o = { x, y, text, color, toX, toY, head }
   function branchPill(o) {
     var color = o.head ? CLR.head : (o.color || CLR.main);
-    var w = Math.max(46, o.text.length * 9 + 22);
+    var w = Math.max(46, o.text.length * 9 + 24);
     var h = 26;
     var px = o.x - w / 2;
     var py = o.y - h / 2;
-    var s = '<g class="c-branch-pill"' + (o.id ? ' data-pill="' + o.id + '"' : '') + '>';
-    // 指向短线
+    var glow = o.head ? 'c-branch-glow-head' : glowIdFor(color);
+    var s = '<g class="c-branch-pill' + (o.head ? ' is-head' : '') + '"' + (o.id ? ' data-pill="' + o.id + '"' : '') + '>';
+    // 指向短线（带一点发光感）
     if (o.toX != null) {
       s += '<line x1="' + o.x + '" y1="' + o.y + '" x2="' + o.toX + '" y2="' + o.toY +
-        '" stroke="' + color + '" stroke-width="2.5" stroke-dasharray="3 3" opacity="0.85"/>';
+        '" stroke="' + color + '" stroke-width="2" stroke-dasharray="2 3" stroke-linecap="round" opacity="0.7"/>';
     }
-    s += '<rect x="' + px + '" y="' + py + '" width="' + w + '" height="' + h +
-      '" rx="13" fill="' + color + '" opacity="' + (o.head ? '1' : '0.92') + '"/>';
-    var tcolor = o.head ? '#1a1500' : '#06121a';
-    s += '<text x="' + o.x + '" y="' + (o.y + 4.5) + '" text-anchor="middle" font-size="13" font-weight="800" ' +
-      'font-family="ui-monospace,monospace" fill="' + tcolor + '">' + o.text + '</text>';
+    if (o.head) {
+      // HEAD：金黄实心 + 发光，深空里最醒目的那枚
+      s += '<rect x="' + px + '" y="' + py + '" width="' + w + '" height="' + h +
+        '" rx="13" fill="' + color + '" filter="url(#' + glow + ')"/>';
+      s += '<rect x="' + px + '" y="' + py + '" width="' + w + '" height="' + h +
+        '" rx="13" fill="none" stroke="#fff" stroke-width="1" opacity="0.45"/>';
+      s += '<text x="' + o.x + '" y="' + (o.y + 4.5) + '" text-anchor="middle" font-size="13" font-weight="800" ' +
+        'font-family="ui-monospace,monospace" fill="#1a1500">' + o.text + '</text>';
+    } else {
+      // 分支名牌：半透明深底 + 主题色发光描边，等宽字体，融入深空
+      s += '<rect x="' + px + '" y="' + py + '" width="' + w + '" height="' + h +
+        '" rx="13" fill="var(--c-bg-card)" opacity="0.82"/>';
+      s += '<rect x="' + px + '" y="' + py + '" width="' + w + '" height="' + h +
+        '" rx="13" fill="' + color + '" opacity="0.16"/>';
+      s += '<rect x="' + px + '" y="' + py + '" width="' + w + '" height="' + h +
+        '" rx="13" fill="none" stroke="' + color + '" stroke-width="1.6" filter="url(#' + glow + ')"/>';
+      s += '<text x="' + o.x + '" y="' + (o.y + 4.5) + '" text-anchor="middle" font-size="13" font-weight="800" ' +
+        'font-family="ui-monospace,monospace" fill="' + color + '">' + o.text + '</text>';
+    }
     s += '</g>';
     return s;
   }
@@ -87,11 +136,25 @@
       '" width="100%" aria-hidden="true">' + inner + '</svg>';
   }
 
-  // 每张 svg 都带的 arrow marker / 通用样式
+  // 一个柔光滤镜（feGaussianBlur 让节点/连线发光，像星点）
+  function glowFilter(id, dev) {
+    return '<filter id="' + id + '" x="-80%" y="-80%" width="260%" height="260%">' +
+      '<feGaussianBlur stdDeviation="' + dev + '" result="b"/>' +
+      '<feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>' +
+      '</filter>';
+  }
+
+  // 每张 svg 都带的 arrow marker + 各色发光滤镜
   function defs() {
     return '<defs>' +
       '<marker id="c-branch-arrow" markerWidth="9" markerHeight="9" refX="6.5" refY="4.5" orient="auto">' +
         '<path d="M0,0 L9,4.5 L0,9 Z" fill="' + CLR.main + '"/></marker>' +
+      glowFilter('c-branch-glow-main', 3) +
+      glowFilter('c-branch-glow-feature', 3) +
+      glowFilter('c-branch-glow-feature2', 3) +
+      glowFilter('c-branch-glow-revert', 3) +
+      glowFilter('c-branch-glow-head', 3.4) +
+      glowFilter('c-branch-glow-ghost', 1.6) +
       '</defs>';
   }
 
@@ -482,11 +545,12 @@
             commonStyle() +
             '<style>' +
             '.c-branch-gamebar{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin:18px 0 4px;}' +
-            '.c-branch-step{font-size:13px;font-weight:700;padding:9px 14px;border-radius:10px;cursor:pointer;border:1px solid var(--c-border);background:var(--c-bg-card);color:var(--c-fg);transition:all .2s;font-family:inherit;}' +
-            '.c-branch-step:hover:not(:disabled){border-color:var(--course-accent);transform:translateY(-2px);}' +
-            '.c-branch-step.done{background:var(--course-accent);border-color:var(--course-accent);color:#06121a;}' +
-            '.c-branch-step.next{box-shadow:0 0 0 3px var(--course-accent-soft);border-color:var(--course-accent);}' +
+            '.c-branch-step{font-size:13px;font-weight:700;padding:9px 14px;border-radius:10px;cursor:pointer;border:1px solid var(--c-border);background:linear-gradient(160deg,var(--c-bg-card),color-mix(in srgb,var(--c-bg-card) 72%,#000));color:var(--c-fg);transition:all .2s;font-family:inherit;}' +
+            '.c-branch-step:hover:not(:disabled){border-color:var(--course-accent);transform:translateY(-2px);box-shadow:0 6px 18px color-mix(in srgb,var(--course-accent) 30%,transparent);}' +
+            '.c-branch-step.done{background:linear-gradient(135deg,var(--course-accent),color-mix(in srgb,var(--course-accent) 70%,#000));border-color:var(--course-accent);color:#06121a;box-shadow:0 0 14px color-mix(in srgb,var(--course-accent) 40%,transparent);}' +
+            '.c-branch-step.next{border-color:var(--course-accent);color:var(--course-accent);animation:c-branch-stepglow 1.8s ease-in-out infinite;}' +
             '.c-branch-step:disabled{opacity:.4;cursor:not-allowed;}' +
+            '@keyframes c-branch-stepglow{0%,100%{box-shadow:0 0 0 2px var(--course-accent-soft);}50%{box-shadow:0 0 0 4px var(--course-accent-soft),0 0 16px color-mix(in srgb,var(--course-accent) 45%,transparent);}}' +
             '.c-branch-narrate{animation:c-branch-pop .35s cubic-bezier(.34,1.56,.64,1);}' +
             '</style>';
 
@@ -772,7 +836,9 @@
             '<style>' +
             '.c-branch-three{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin:18px 0;}' +
             '@media (max-width:760px){.c-branch-three{grid-template-columns:1fr;}}' +
-            '.c-branch-rcard{background:var(--c-bg-card);border:1px solid var(--c-border);border-radius:14px;padding:14px 16px;}' +
+            '.c-branch-rcard{position:relative;background:linear-gradient(160deg,var(--c-bg-card),color-mix(in srgb,var(--c-bg-card) 70%,#000));border:1px solid var(--c-border);border-radius:14px;padding:14px 16px;transition:border-color .2s,transform .2s,box-shadow .2s;}' +
+            '.c-branch-rcard::before{content:"";position:absolute;left:0;top:14px;bottom:14px;width:3px;border-radius:3px;background:var(--course-accent);box-shadow:0 0 12px var(--course-accent);opacity:.9;}' +
+            '.c-branch-rcard:hover{transform:translateY(-3px);border-color:color-mix(in srgb,var(--course-accent) 45%,var(--c-border));box-shadow:0 12px 30px rgba(0,0,0,.45);}' +
             '.c-branch-rtitle{margin-bottom:6px;}' +
             '.c-branch-rcard .c-branch-svg{margin:4px 0 8px;}' +
             '.c-branch-rcard .deck-p{font-size:13px;margin:0;line-height:1.6;}' +
@@ -875,8 +941,21 @@
   // ------------------------------------------------------------
   function commonStyle() {
     return '<style>' +
-      '.c-branch-stage{margin:18px auto;max-width:640px;display:flex;justify-content:center;}' +
-      '.c-branch-svg{display:block;filter:drop-shadow(0 4px 14px rgba(0,0,0,.35));overflow:visible;}' +
+      '.c-branch-stage{margin:18px auto;max-width:660px;display:flex;justify-content:center;padding:6px 0;}' +
+      '.c-branch-svg{display:block;overflow:visible;}' +
+      // 树状图整体入场：节点/连线 stagger 淡入
+      '.c-branch-svg .c-branch-node,.c-branch-svg .c-branch-pill{animation:c-branch-twinkle .5s ease both;}' +
+      '.c-branch-svg .c-branch-node{transform-box:fill-box;transform-origin:center;}' +
+      '.c-branch-svg .c-branch-node:nth-of-type(1){animation-delay:.02s}' +
+      '.c-branch-svg .c-branch-node:nth-of-type(2){animation-delay:.08s}' +
+      '.c-branch-svg .c-branch-node:nth-of-type(3){animation-delay:.14s}' +
+      '.c-branch-svg .c-branch-node:nth-of-type(4){animation-delay:.20s}' +
+      '.c-branch-svg .c-branch-node:nth-of-type(5){animation-delay:.26s}' +
+      '.c-branch-svg .c-branch-node:nth-of-type(6){animation-delay:.32s}' +
+      // 节点 hover 微亮（不改任何逻辑，纯视觉）
+      '.c-branch-svg .c-branch-node:not(.is-ghost){cursor:default;transition:filter .2s;}' +
+      '.c-branch-svg .c-branch-node:not(.is-ghost):hover{filter:brightness(1.18);}' +
+      '.c-branch-svg .c-branch-pill.is-head{animation:c-branch-headpulse 2.6s ease-in-out infinite;transform-box:fill-box;transform-origin:center;}' +
       '.c-branch-bigline{font-size:18px;margin:8px 0;}' +
       '.c-branch-2col{grid-template-columns:1fr 1fr;max-width:640px;margin:18px auto;}' +
       '@media (max-width:640px){.c-branch-2col{grid-template-columns:1fr;}}' +
@@ -885,13 +964,22 @@
       '.c-branch-3col .deck-card{text-align:center;}' +
       '.c-branch-cardh{font-weight:700;color:var(--c-fg);margin-bottom:6px;}' +
       '.c-branch-cardh code,.c-branch-cardh .deck-kbd,.deck-card code{font-family:ui-monospace,monospace;font-size:.9em;background:var(--c-bg-soft);padding:1px 6px;border-radius:5px;color:var(--course-accent);}' +
-      '.c-branch-stat{font-size:30px;line-height:1;margin-bottom:6px;}' +
+      '.c-branch-stat{font-size:30px;line-height:1;margin-bottom:6px;filter:drop-shadow(0 0 10px var(--course-accent-soft));}' +
       '.c-branch-statlabel{font-size:13px;color:var(--c-fg-muted);}' +
+      // 多人协作页：两张人物卡按各自分支色描边 + 角落柔光
+      '.c-branch-personA,.c-branch-personB{position:relative;overflow:hidden;}' +
+      '.c-branch-personA{border-color:color-mix(in srgb,' + CLR.feature + ' 42%,var(--c-border));box-shadow:inset 0 0 36px color-mix(in srgb,' + CLR.feature + ' 8%,transparent);}' +
+      '.c-branch-personB{border-color:color-mix(in srgb,' + CLR.feature2 + ' 42%,var(--c-border));box-shadow:inset 0 0 36px color-mix(in srgb,' + CLR.feature2 + ' 8%,transparent);}' +
+      '.c-branch-personA::after,.c-branch-personB::after{content:"";position:absolute;top:-30px;right:-30px;width:90px;height:90px;border-radius:50%;filter:blur(26px);opacity:.5;pointer-events:none;}' +
+      '.c-branch-personA::after{background:' + CLR.feature + ';}' +
+      '.c-branch-personB::after{background:' + CLR.feature2 + ';}' +
       '.c-branch-row{display:flex;gap:12px;align-items:center;justify-content:center;flex-wrap:wrap;}' +
       '.c-branch-counter{font-size:13px;color:var(--c-fg-muted);font-family:ui-monospace,monospace;}' +
       '.c-branch-grow{animation:c-branch-pop .45s cubic-bezier(.34,1.56,.64,1);}' +
       '.c-branch-hero{margin:2px 0 6px;}' +
       '@keyframes c-branch-pop{from{opacity:0;transform:translateY(10px) scale(.96)}to{opacity:1;transform:none}}' +
+      '@keyframes c-branch-twinkle{from{opacity:0;transform:scale(.7)}60%{opacity:1}to{opacity:1;transform:scale(1)}}' +
+      '@keyframes c-branch-headpulse{0%,100%{filter:none}50%{filter:brightness(1.12) drop-shadow(0 0 6px ' + CLR.head + ')}}' +
       '</style>';
   }
 

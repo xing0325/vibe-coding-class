@@ -8,14 +8,25 @@
     var s = document.createElement('style');
     s.id = 'c-undo-style';
     s.textContent = [
-      '.c-undo-graph{display:block;margin:16px auto;}',
+      '.c-undo-graph{display:block;margin:16px auto;overflow:visible;}',
+      // 节点入场 + hover 微亮（纯视觉，不碰交互）
+      '.c-undo-node{transform-box:fill-box;transform-origin:center;animation:c-undo-twinkle .5s ease both;transition:filter .2s;}',
+      '.c-undo-node:not(.is-ghost):hover{filter:brightness(1.18);}',
+      '.c-undo-node:nth-of-type(1){animation-delay:.04s}.c-undo-node:nth-of-type(2){animation-delay:.12s}.c-undo-node:nth-of-type(3){animation-delay:.2s}.c-undo-node:nth-of-type(4){animation-delay:.28s}.c-undo-node:nth-of-type(5){animation-delay:.36s}',
+      // HEAD 金黄 pill 发光脉动',
+      '.c-undo-headg{filter:drop-shadow(0 0 5px #e3b341);transform-box:fill-box;transform-origin:center;animation:c-undo-headpulse 2.6s ease-in-out infinite;}',
+      '@keyframes c-undo-twinkle{from{opacity:0;transform:scale(.7)}60%{opacity:1}to{opacity:1;transform:scale(1)}}',
+      '@keyframes c-undo-headpulse{0%,100%{filter:drop-shadow(0 0 5px #e3b341)}50%{filter:drop-shadow(0 0 9px #e3b341) brightness(1.08)}}',
       '.c-undo-hashbox{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;background:var(--c-bg-soft);border:1px solid var(--c-border);border-radius:12px;padding:18px;text-align:center;font-size:clamp(15px,2.4vw,22px);letter-spacing:1px;word-break:break-all;margin:14px 0;}',
       '.c-undo-hashbox .short{color:#0d1117;background:var(--course-accent);border-radius:6px;padding:2px 5px;font-weight:700;}',
       '.c-undo-hashbox .rest{color:var(--c-fg-muted);}',
       '.c-undo-3{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin:16px 0;}',
       '@media(max-width:760px){.c-undo-3{grid-template-columns:1fr;}}',
       '.c-undo-pill{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:10px 0 4px;}',
-      '.c-undo-card{background:var(--c-bg-card);border:1px solid var(--c-border);border-top:4px solid var(--course-accent);border-radius:14px;padding:16px;display:flex;flex-direction:column;gap:8px;}',
+      '.c-undo-card{position:relative;overflow:hidden;background:linear-gradient(160deg,var(--c-bg-card),color-mix(in srgb,var(--c-bg-card) 68%,#000));border:1px solid var(--c-border);border-top:3px solid var(--course-accent);border-radius:14px;padding:16px;display:flex;flex-direction:column;gap:8px;transition:transform .2s,border-color .2s,box-shadow .2s;}',
+      '.c-undo-card::after{content:"";position:absolute;top:-34px;right:-34px;width:96px;height:96px;border-radius:50%;background:var(--course-accent);filter:blur(30px);opacity:.14;pointer-events:none;}',
+      '.c-undo-card:hover{transform:translateY(-3px);border-color:color-mix(in srgb,var(--course-accent) 50%,var(--c-border));box-shadow:0 14px 34px rgba(0,0,0,.45);}',
+      '.c-undo-card svg{filter:drop-shadow(0 0 5px color-mix(in srgb,var(--course-accent) 35%,transparent));}',
       '.c-undo-card h3{margin:0;font-size:17px;}',
       '.c-undo-card code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;color:var(--course-accent);}',
       '.c-undo-card .mini{font-size:12px;color:var(--c-fg-muted);}',
@@ -47,33 +58,51 @@
   function commitNode(x, y, hash, opts) {
     opts = opts || {};
     var r = 16;
-    var fill = opts.ghost ? 'rgba(125,133,144,.25)' : 'var(--course-accent)';
+    var fill = opts.ghost ? 'rgba(125,133,144,.22)' : 'var(--course-accent)';
     var stroke = opts.ghost ? 'rgba(125,133,144,.6)' : '#fff';
     var dash = opts.ghost ? ' stroke-dasharray="3 3"' : '';
     var hashColor = opts.ghost ? 'rgba(125,133,144,.7)' : 'var(--c-fg-muted)';
-    return '<g>' +
-      '<circle cx="' + x + '" cy="' + y + '" r="' + r + '" fill="' + fill + '" stroke="' + stroke + '" stroke-width="2.5"' + dash + '/>' +
-      (opts.label ? '<text x="' + x + '" y="' + (y + 5) + '" text-anchor="middle" font-size="13" fill="#0d1117" font-weight="700">' + opts.label + '</text>' : '') +
-      '<text x="' + x + '" y="' + (y + 34) + '" text-anchor="middle" font-size="12" font-family="ui-monospace,Menlo,monospace" fill="' + hashColor + '">' + hash + '</text>' +
+    var s = '<g class="c-undo-node' + (opts.ghost ? ' is-ghost' : '') + '">';
+    // 发光晕环（健康节点才有，孤儿节点保持灰暗）
+    if (!opts.ghost) {
+      s += '<circle cx="' + x + '" cy="' + y + '" r="' + (r + 3) + '" fill="var(--course-accent)" opacity="0.18"/>';
+    }
+    s += '<circle cx="' + x + '" cy="' + y + '" r="' + r + '" fill="' + fill + '" stroke="' + stroke + '" stroke-width="2"' + dash + '/>';
+    // 内层高光，给圆点一点玻璃质感
+    if (!opts.ghost) {
+      s += '<circle cx="' + (x - 5) + '" cy="' + (y - 5.5) + '" r="5" fill="#fff" opacity="0.32"/>';
+    }
+    s += (opts.label ? '<text x="' + x + '" y="' + (y + 5) + '" text-anchor="middle" font-size="13" fill="#0d1117" font-weight="700">' + opts.label + '</text>' : '') +
+      '<text x="' + x + '" y="' + (y + 34) + '" text-anchor="middle" font-size="12" font-family="ui-monospace,Menlo,monospace" letter-spacing="0.4" fill="' + hashColor + '">' + hash + '</text>' +
       '</g>';
+    return s;
   }
   function edge(x1, y1, x2, y2, ghost) {
-    var st = ghost ? 'rgba(125,133,144,.5)' : 'var(--c-border)';
-    var dash = ghost ? ' stroke-dasharray="3 4"' : '';
-    return '<line x1="' + x1 + '" y1="' + y1 + '" x2="' + x2 + '" y2="' + y2 + '" stroke="' + st + '" stroke-width="3"' + dash + '/>';
+    if (ghost) {
+      return '<line x1="' + x1 + '" y1="' + y1 + '" x2="' + x2 + '" y2="' + y2 +
+        '" stroke="rgba(125,133,144,.5)" stroke-width="2.4" stroke-linecap="round" stroke-dasharray="4 4"/>';
+    }
+    // 发光底线 + 主连线，星座连线质感
+    return '<line x1="' + x1 + '" y1="' + y1 + '" x2="' + x2 + '" y2="' + y2 +
+        '" stroke="var(--course-accent)" stroke-width="5.5" stroke-linecap="round" opacity="0.22"/>' +
+      '<line x1="' + x1 + '" y1="' + y1 + '" x2="' + x2 + '" y2="' + y2 +
+        '" stroke="var(--course-accent)" stroke-width="2.6" stroke-linecap="round" opacity="0.85"/>';
   }
-  // 分支 pill：指向某 commit
+  // 分支 pill：指向某 commit —— 半透明深底 + 主题色发光描边
   function branchPill(x, y, text) {
-    var w = text.length * 8 + 18;
-    return '<g>' +
-      '<rect x="' + (x - w / 2) + '" y="' + y + '" width="' + w + '" height="22" rx="11" fill="var(--c-bg-soft)" stroke="var(--course-accent)" stroke-width="1.5"/>' +
-      '<text x="' + x + '" y="' + (y + 15) + '" text-anchor="middle" font-size="12" font-family="ui-monospace,Menlo,monospace" fill="var(--course-accent)">' + text + '</text>' +
+    var w = text.length * 8 + 20;
+    return '<g class="c-undo-pillg">' +
+      '<rect x="' + (x - w / 2) + '" y="' + y + '" width="' + w + '" height="22" rx="11" fill="var(--c-bg-card)" opacity="0.85"/>' +
+      '<rect x="' + (x - w / 2) + '" y="' + y + '" width="' + w + '" height="22" rx="11" fill="var(--course-accent)" opacity="0.16"/>' +
+      '<rect x="' + (x - w / 2) + '" y="' + y + '" width="' + w + '" height="22" rx="11" fill="none" stroke="var(--course-accent)" stroke-width="1.5"/>' +
+      '<text x="' + x + '" y="' + (y + 15) + '" text-anchor="middle" font-size="12" font-weight="700" font-family="ui-monospace,Menlo,monospace" fill="var(--course-accent)">' + text + '</text>' +
       '</g>';
   }
-  // HEAD pill：金黄
+  // HEAD pill：金黄发光
   function headPill(x, y) {
-    return '<g>' +
+    return '<g class="c-undo-headg">' +
       '<rect x="' + (x - 26) + '" y="' + y + '" width="52" height="22" rx="11" fill="#e3b341"/>' +
+      '<rect x="' + (x - 26) + '" y="' + y + '" width="52" height="22" rx="11" fill="none" stroke="#fff" stroke-width="1" opacity="0.45"/>' +
       '<text x="' + x + '" y="' + (y + 15) + '" text-anchor="middle" font-size="12" font-weight="700" font-family="ui-monospace,Menlo,monospace" fill="#0d1117">HEAD</text>' +
       '</g>';
   }
@@ -196,11 +225,11 @@
         // reset = 指针往回拉
         _svgReset: function () {
           return '<svg width="100%" height="64" viewBox="0 0 200 64">' +
-            '<line x1="30" y1="32" x2="170" y2="32" stroke="var(--c-border)" stroke-width="3"/>' +
+            '<line x1="30" y1="32" x2="170" y2="32" stroke="var(--course-accent)" stroke-width="3" stroke-linecap="round" opacity="0.7"/>' +
             '<circle cx="50" cy="32" r="9" fill="var(--course-accent)" stroke="#fff" stroke-width="2"/>' +
             '<circle cx="100" cy="32" r="9" fill="var(--course-accent)" stroke="#fff" stroke-width="2"/>' +
             '<circle cx="150" cy="32" r="9" fill="rgba(125,133,144,.25)" stroke="rgba(125,133,144,.6)" stroke-width="2" stroke-dasharray="3 3"/>' +
-            '<path d="M120 18 L100 18" stroke="#e3b341" stroke-width="3"/>' +
+            '<path d="M120 18 L100 18" stroke="#e3b341" stroke-width="3" stroke-linecap="round"/>' +
             '<path d="M104 13l-6 5 6 5z" fill="#e3b341"/>' +
             '<rect x="86" y="2" width="40" height="16" rx="8" fill="#e3b341"/>' +
             '<text x="106" y="14" text-anchor="middle" font-size="10" font-weight="700" fill="#0d1117">HEAD</text>' +
@@ -209,9 +238,10 @@
         // revert = 新增一个"反向"圆点
         _svgRevert: function () {
           return '<svg width="100%" height="64" viewBox="0 0 200 64">' +
-            '<line x1="30" y1="36" x2="170" y2="36" stroke="var(--c-border)" stroke-width="3"/>' +
+            '<line x1="30" y1="36" x2="170" y2="36" stroke="var(--course-accent)" stroke-width="3" stroke-linecap="round" opacity="0.7"/>' +
             '<circle cx="55" cy="36" r="9" fill="var(--course-accent)" stroke="#fff" stroke-width="2"/>' +
             '<circle cx="105" cy="36" r="9" fill="var(--course-accent)" stroke="#fff" stroke-width="2"/>' +
+            '<circle cx="155" cy="36" r="14" fill="#3fb950" opacity="0.2"/>' +
             '<circle cx="155" cy="36" r="11" fill="#3fb950" stroke="#fff" stroke-width="2"/>' +
             '<text x="155" y="40" text-anchor="middle" font-size="12" font-weight="700" fill="#0d1117">↩</text>' +
             '<text x="155" y="58" text-anchor="middle" font-size="10" fill="#3fb950">反向提交</text>' +

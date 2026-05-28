@@ -49,13 +49,31 @@
     return html;
   }
 
-  // 复用：金黄色箭头 marker 定义（SVG defs）
+  // 复用：金黄色箭头 marker 定义（SVG defs）+ 节点发光滤镜 + 数据流光效
+  // 同一个 id 既给 marker 用，也派生出 <id>-glow / <id>-grad / <id>-flow 供节点引用。
   function arrowDefs(id, color) {
     color = color || 'var(--course-accent)';
     return (
-      '<defs><marker id="' + id + '" markerWidth="9" markerHeight="9" refX="7" refY="4.5" orient="auto">' +
-        '<path d="M0,0 L9,4.5 L0,9 Z" fill="' + color + '"/>' +
-      '</marker></defs>'
+      '<defs>' +
+        '<marker id="' + id + '" markerWidth="11" markerHeight="11" refX="8" refY="5" orient="auto">' +
+          '<path d="M1,1 L9.5,5 L1,9 L3,5 Z" fill="' + color + '" stroke="' + color + '" stroke-width="0.6" stroke-linejoin="round"/>' +
+        '</marker>' +
+        // 节点柔和发光
+        '<filter id="' + id + '-glow" x="-60%" y="-60%" width="220%" height="220%">' +
+          '<feDropShadow dx="0" dy="0" stdDeviation="3.4" flood-color="' + color + '" flood-opacity="0.85"/>' +
+        '</filter>' +
+        // 数据块渐变填充（深空底 → 主题色微光）
+        '<linearGradient id="' + id + '-grad" x1="0" y1="0" x2="0" y2="1">' +
+          '<stop offset="0%" stop-color="' + color + '" stop-opacity="0.22"/>' +
+          '<stop offset="100%" stop-color="' + color + '" stop-opacity="0.06"/>' +
+        '</linearGradient>' +
+        // 连线上流动的高光（数据流）
+        '<linearGradient id="' + id + '-flow" x1="0" y1="0" x2="1" y2="0">' +
+          '<stop offset="0%" stop-color="' + color + '" stop-opacity="0"/>' +
+          '<stop offset="50%" stop-color="#fff" stop-opacity="0.9"/>' +
+          '<stop offset="100%" stop-color="' + color + '" stop-opacity="0"/>' +
+        '</linearGradient>' +
+      '</defs>'
     );
   }
 
@@ -75,8 +93,8 @@
         title: '一个细思极恐的问题',
         render: function (stage, api) {
           stage.innerHTML =
-            '<div class="deck-center">' +
-              '<div class="c-math-hook-ico">🏔️</div>' +
+            '<div class="deck-center c-math-hook">' +
+              '<div class="c-math-hook-orb"><div class="c-math-hook-ico">🏔️</div></div>' +
               '<h1 class="deck-h1">为什么 git 的历史<br><span style="color:var(--course-accent)">几乎没法偷偷篡改</span>？</h1>' +
               '<p class="deck-lead">你有没有想过这件怪事——</p>' +
               '<div class="deck-callout c-math-hook-call">' +
@@ -92,7 +110,12 @@
               '</p>' +
             '</div>' +
             '<style>' +
-            '.c-math-hook-ico{font-size:58px;line-height:1;margin:4px 0 10px;animation:c-math-float 3.4s ease-in-out infinite;}' +
+            '.c-math-hook{position:relative;}' +
+            '.c-math-hook-orb{position:relative;width:120px;height:120px;margin:6px auto 12px;display:flex;align-items:center;justify-content:center;}' +
+            '.c-math-hook-orb::before{content:"";position:absolute;inset:0;border-radius:50%;background:radial-gradient(circle,color-mix(in srgb,var(--course-accent) 38%,transparent),transparent 70%);filter:blur(4px);animation:c-math-breathe 4s ease-in-out infinite;}' +
+            '.c-math-hook-orb::after{content:"";position:absolute;inset:14px;border-radius:50%;border:1px solid color-mix(in srgb,var(--course-accent) 45%,transparent);box-shadow:0 0 24px color-mix(in srgb,var(--course-accent) 35%,transparent),inset 0 0 18px color-mix(in srgb,var(--course-accent) 18%,transparent);}' +
+            '@keyframes c-math-breathe{0%,100%{opacity:.5;transform:scale(.92)}50%{opacity:.9;transform:scale(1.06)}}' +
+            '.c-math-hook-ico{position:relative;z-index:1;font-size:56px;line-height:1;filter:drop-shadow(0 0 10px color-mix(in srgb,var(--course-accent) 60%,transparent));animation:c-math-float 3.4s ease-in-out infinite;}' +
             '@keyframes c-math-float{0%,100%{transform:translateY(0)}50%{transform:translateY(-7px)}}' +
             '.c-math-hook-call{max-width:600px;margin:22px auto;text-align:left;}' +
             '.c-math-hook-foot{margin-top:20px;color:var(--c-fg-muted);}' +
@@ -114,14 +137,14 @@
             // 机器示意 SVG
             '<svg class="c-math-machine" viewBox="0 0 560 110" width="100%" aria-hidden="true">' +
               arrowDefs('c-math-mk1') +
-              '<rect x="14" y="34" width="150" height="42" rx="8" fill="var(--c-bg-soft)" stroke="var(--c-border)"/>' +
+              '<rect x="14" y="34" width="150" height="42" rx="9" fill="var(--c-bg-soft)" stroke="var(--c-border)" stroke-width="1.5"/>' +
               '<text x="89" y="60" text-anchor="middle" fill="var(--c-fg-muted)" font-size="13">任意内容</text>' +
-              '<line x1="168" y1="55" x2="214" y2="55" stroke="var(--course-accent)" stroke-width="2.5" marker-end="url(#c-math-mk1)"/>' +
-              '<rect x="220" y="20" width="120" height="70" rx="12" fill="var(--c-bg-card)" stroke="var(--course-accent)" stroke-width="2"/>' +
-              '<text x="280" y="50" text-anchor="middle" font-size="26">⚙️</text>' +
+              '<line x1="168" y1="55" x2="214" y2="55" stroke="var(--course-accent)" stroke-width="2.8" stroke-linecap="round" marker-end="url(#c-math-mk1)"/>' +
+              '<rect x="220" y="20" width="120" height="70" rx="14" fill="url(#c-math-mk1-grad)" stroke="var(--course-accent)" stroke-width="2.2" filter="url(#c-math-mk1-glow)"/>' +
+              '<text x="280" y="50" text-anchor="middle" font-size="26" class="c-math-gear">⚙️</text>' +
               '<text x="280" y="74" text-anchor="middle" fill="var(--course-accent)" font-size="12" font-weight="700">哈希函数</text>' +
-              '<line x1="344" y1="55" x2="390" y2="55" stroke="var(--course-accent)" stroke-width="2.5" marker-end="url(#c-math-mk1)"/>' +
-              '<rect x="396" y="34" width="150" height="42" rx="8" fill="var(--c-bg-soft)" stroke="var(--course-accent)"/>' +
+              '<line x1="344" y1="55" x2="390" y2="55" stroke="var(--course-accent)" stroke-width="2.8" stroke-linecap="round" marker-end="url(#c-math-mk1)"/>' +
+              '<rect x="396" y="34" width="150" height="42" rx="9" fill="url(#c-math-mk1-grad)" stroke="var(--course-accent)" stroke-width="1.8" filter="url(#c-math-mk1-glow)"/>' +
               '<text x="471" y="60" text-anchor="middle" fill="var(--course-accent)" font-size="13" font-family="ui-monospace,monospace">固定长度指纹</text>' +
             '</svg>' +
 
@@ -148,20 +171,22 @@
 
             '<style>' +
             '.c-math-machine{display:block;margin:18px auto 6px;max-width:560px;}' +
+            '.c-math-gear{transform-box:fill-box;transform-origin:center;animation:c-math-spin 8s linear infinite;}' +
+            '@keyframes c-math-spin{to{transform:rotate(360deg)}}' +
             '.c-math-3col{grid-template-columns:repeat(3,1fr);max-width:620px;margin:16px auto;}' +
             '.c-math-3col .deck-card{text-align:center;padding:14px 10px;}' +
-            '.c-math-prop{font-size:28px;line-height:1;margin-bottom:6px;}' +
+            '.c-math-prop{font-size:28px;line-height:1;margin-bottom:6px;filter:drop-shadow(0 0 6px color-mix(in srgb,var(--course-accent) 45%,transparent));}' +
             '.c-math-prop-t{font-size:12.5px;color:var(--c-fg-muted);line-height:1.4;}' +
-            '.c-math-demo{max-width:600px;margin:22px auto 6px;background:var(--c-bg-card);border:1px solid var(--c-border);border-radius:14px;padding:18px 20px;}' +
+            '.c-math-demo{position:relative;max-width:600px;margin:22px auto 6px;background:linear-gradient(160deg,var(--c-bg-card),color-mix(in srgb,var(--c-bg-card) 72%,#000));border:1px solid color-mix(in srgb,var(--course-accent) 28%,var(--c-border));border-radius:16px;padding:18px 20px;box-shadow:0 0 34px color-mix(in srgb,var(--course-accent) 10%,transparent),inset 0 0 40px rgba(0,0,0,.3);}' +
             '.c-math-demo-h{font-size:14px;color:var(--c-fg);margin-bottom:12px;}' +
-            '.c-math-input{width:100%;box-sizing:border-box;font-size:16px;padding:11px 14px;border-radius:10px;background:var(--c-bg-soft);border:2px solid var(--c-border);color:var(--c-fg);outline:none;transition:border-color .2s;}' +
-            '.c-math-input:focus{border-color:var(--course-accent);}' +
-            '.c-math-hashout-wrap{display:flex;align-items:center;gap:10px;margin-top:14px;flex-wrap:wrap;}' +
+            '.c-math-input{width:100%;box-sizing:border-box;font-size:16px;padding:11px 14px;border-radius:10px;background:#05070c;border:2px solid var(--c-border);color:var(--c-fg);outline:none;font-family:ui-monospace,monospace;transition:border-color .2s,box-shadow .2s;}' +
+            '.c-math-input:focus{border-color:var(--course-accent);box-shadow:0 0 0 3px var(--course-accent-soft),0 0 18px color-mix(in srgb,var(--course-accent) 25%,transparent);}' +
+            '.c-math-hashout-wrap{display:flex;align-items:center;gap:10px;margin-top:14px;flex-wrap:wrap;padding:12px 14px;background:#05070c;border:1px solid var(--c-border);border-radius:10px;}' +
             '.c-math-hashlabel{font-size:13px;color:var(--c-fg-muted);font-weight:700;white-space:nowrap;}' +
-            '.c-math-hashout{font-family:ui-monospace,SFMono-Regular,monospace;font-size:20px;letter-spacing:1px;word-break:break-all;}' +
-            '.c-math-h-same{color:var(--c-fg-muted);}' +
-            '.c-math-h-diff{color:#0d1117;background:var(--course-accent);border-radius:3px;padding:0 1px;animation:c-math-flash .5s ease;}' +
-            '@keyframes c-math-flash{from{transform:scale(1.5)}to{transform:scale(1)}}' +
+            '.c-math-hashout{font-family:ui-monospace,SFMono-Regular,monospace;font-size:21px;letter-spacing:2px;word-break:break-all;}' +
+            '.c-math-h-same{color:color-mix(in srgb,var(--course-accent) 55%,var(--c-fg-muted));text-shadow:0 0 6px color-mix(in srgb,var(--course-accent) 22%,transparent);transition:color .3s;}' +
+            '.c-math-h-diff{color:#0d1117;background:var(--course-accent);border-radius:3px;padding:0 2px;font-weight:700;box-shadow:0 0 10px var(--course-accent),0 0 20px color-mix(in srgb,var(--course-accent) 60%,transparent);animation:c-math-flash .55s ease;}' +
+            '@keyframes c-math-flash{0%{transform:scale(1.6);box-shadow:0 0 18px var(--course-accent),0 0 32px var(--course-accent)}100%{transform:scale(1)}}' +
             '.c-math-tip{font-size:12px;color:var(--c-fg-muted);margin-top:12px;line-height:1.5;}' +
             '.c-math-real{max-width:600px;margin:14px auto 0;text-align:center;color:var(--c-fg-muted);}' +
             '</style>';
@@ -195,18 +220,18 @@
 
             '<svg class="c-math-addr" viewBox="0 0 560 150" width="100%" aria-hidden="true">' +
               arrowDefs('c-math-mk2') +
-              '<rect x="20" y="20" width="170" height="46" rx="10" fill="var(--c-bg-soft)" stroke="var(--c-border)"/>' +
+              '<rect x="20" y="20" width="170" height="46" rx="11" fill="var(--c-bg-soft)" stroke="var(--c-border)" stroke-width="1.5"/>' +
               '<text x="105" y="40" text-anchor="middle" fill="var(--c-fg)" font-size="13">内容："hi"</text>' +
               '<text x="105" y="57" text-anchor="middle" fill="var(--c-fg-muted)" font-size="11">放进仓库</text>' +
-              '<line x1="194" y1="43" x2="248" y2="43" stroke="var(--course-accent)" stroke-width="2.5" marker-end="url(#c-math-mk2)"/>' +
-              '<rect x="254" y="20" width="286" height="46" rx="10" fill="var(--c-bg-card)" stroke="var(--course-accent)"/>' +
+              '<line x1="194" y1="43" x2="248" y2="43" stroke="var(--course-accent)" stroke-width="2.8" stroke-linecap="round" marker-end="url(#c-math-mk2)"/>' +
+              '<rect x="254" y="20" width="286" height="46" rx="11" fill="url(#c-math-mk2-grad)" stroke="var(--course-accent)" stroke-width="1.8" filter="url(#c-math-mk2-glow)"/>' +
               '<text x="397" y="48" text-anchor="middle" fill="var(--course-accent)" font-size="15" font-family="ui-monospace,monospace">门牌号 = ' + pseudoHash('hi', 10) + '</text>' +
 
-              '<rect x="20" y="92" width="170" height="46" rx="10" fill="var(--c-bg-soft)" stroke="var(--c-border)"/>' +
+              '<rect x="20" y="92" width="170" height="46" rx="11" fill="var(--c-bg-soft)" stroke="var(--c-border)" stroke-width="1.5"/>' +
               '<text x="105" y="112" text-anchor="middle" fill="var(--c-fg)" font-size="13">同样内容："hi"</text>' +
               '<text x="105" y="129" text-anchor="middle" fill="var(--c-fg-muted)" font-size="11">又放一次</text>' +
-              '<line x1="194" y1="115" x2="248" y2="115" stroke="var(--course-accent)" stroke-width="2.5" marker-end="url(#c-math-mk2)"/>' +
-              '<rect x="254" y="92" width="286" height="46" rx="10" fill="var(--c-bg-card)" stroke="var(--course-accent)" stroke-dasharray="6 4"/>' +
+              '<line x1="194" y1="115" x2="248" y2="115" stroke="var(--course-accent)" stroke-width="2.8" stroke-linecap="round" marker-end="url(#c-math-mk2)"/>' +
+              '<rect x="254" y="92" width="286" height="46" rx="11" fill="url(#c-math-mk2-grad)" stroke="var(--course-accent)" stroke-width="1.8" stroke-dasharray="7 4" filter="url(#c-math-mk2-glow)"/>' +
               '<text x="397" y="120" text-anchor="middle" fill="var(--course-accent)" font-size="15" font-family="ui-monospace,monospace">同一个门牌号！</text>' +
             '</svg>' +
 
@@ -273,14 +298,15 @@
 
             '<style>' +
             '.c-math-objs{grid-template-columns:repeat(3,1fr);max-width:760px;margin:20px auto 0;gap:14px;}' +
-            '.c-math-obj{text-align:center;cursor:pointer;transition:border-color .25s,transform .2s,box-shadow .25s;}' +
-            '.c-math-obj:hover{transform:translateY(-3px);border-color:var(--course-accent);box-shadow:0 0 22px var(--course-accent-soft);}' +
-            '.c-math-obj-ico{font-size:38px;line-height:1;margin-bottom:6px;}' +
-            '.c-math-obj-name{font-family:ui-monospace,monospace;font-weight:800;font-size:18px;color:var(--course-accent);}' +
+            '.c-math-obj{position:relative;text-align:center;cursor:pointer;transition:border-color .25s,transform .2s,box-shadow .25s;}' +
+            '.c-math-obj:hover{transform:translateY(-3px);border-color:var(--course-accent);box-shadow:0 0 26px color-mix(in srgb,var(--course-accent) 22%,transparent);}' +
+            '.c-math-obj.open{border-color:color-mix(in srgb,var(--course-accent) 55%,var(--c-border));box-shadow:0 0 26px color-mix(in srgb,var(--course-accent) 18%,transparent);}' +
+            '.c-math-obj-ico{font-size:38px;line-height:1;margin-bottom:6px;filter:drop-shadow(0 0 8px color-mix(in srgb,var(--course-accent) 50%,transparent));}' +
+            '.c-math-obj-name{font-family:ui-monospace,monospace;font-weight:800;font-size:18px;color:var(--course-accent);text-shadow:0 0 12px color-mix(in srgb,var(--course-accent) 40%,transparent);}' +
             '.c-math-obj-one{font-size:13px;color:var(--c-fg);margin:6px 0;font-weight:600;}' +
             '.c-math-obj-more{font-size:12.5px;color:var(--c-fg-muted);line-height:1.55;max-height:0;overflow:hidden;opacity:0;transition:max-height .35s ease,opacity .3s ease,margin .3s;}' +
             '.c-math-obj.open .c-math-obj-more{max-height:200px;opacity:1;margin-top:8px;}' +
-            '.c-math-obj-hash{display:inline-block;margin-top:8px;font-family:ui-monospace,monospace;font-size:11px;color:var(--course-accent);}' +
+            '.c-math-obj-hash{display:inline-block;margin-top:8px;font-family:ui-monospace,monospace;font-size:11px;color:var(--course-accent);background:#05070c;border:1px solid color-mix(in srgb,var(--course-accent) 25%,var(--c-border));border-radius:6px;padding:3px 8px;}' +
             '.c-math-obj-call{max-width:700px;margin:22px auto 0;text-align:left;}' +
             '</style>';
 
@@ -309,25 +335,29 @@
 
             '<svg class="c-math-chain" viewBox="0 0 620 200" width="100%" aria-hidden="true">' +
               arrowDefs('c-math-mk3') +
+              // 连父亲的指针（先画，垫在方块下面）：实线 + 流动高光叠在上面
+              '<g class="c-math-chain-links">' +
+                '<line x1="230" y1="125" x2="192" y2="125" stroke="var(--course-accent)" stroke-width="3" stroke-linecap="round" marker-end="url(#c-math-mk3)"/>' +
+                '<line x1="430" y1="125" x2="392" y2="125" stroke="var(--course-accent)" stroke-width="3" stroke-linecap="round" marker-end="url(#c-math-mk3)"/>' +
+                '<line x1="194" y1="125" x2="230" y2="125" stroke="url(#c-math-mk3-flow)" stroke-width="3" stroke-linecap="round" class="c-math-flow"/>' +
+                '<line x1="394" y1="125" x2="430" y2="125" stroke="url(#c-math-mk3-flow)" stroke-width="3" stroke-linecap="round" class="c-math-flow" style="animation-delay:.6s"/>' +
+              '</g>' +
               // 三个 commit 方块（C1 最老 → C3 最新），箭头从儿子指向父亲
               [0, 1, 2].map(function (i) {
                 var x = 30 + i * 200;
                 return (
-                  '<g>' +
-                    '<rect x="' + x + '" y="40" width="160" height="110" rx="12" ' +
-                      'fill="var(--c-bg-card)" stroke="var(--course-accent)" stroke-width="2"/>' +
+                  '<g class="c-math-chain-node" style="animation-delay:' + (i * 180) + 'ms">' +
+                    '<rect x="' + x + '" y="40" width="160" height="110" rx="13" ' +
+                      'fill="url(#c-math-mk3-grad)" stroke="var(--course-accent)" stroke-width="2.2" filter="url(#c-math-mk3-glow)"/>' +
                     '<text x="' + (x + 80) + '" y="64" text-anchor="middle" fill="var(--course-accent)" font-size="14" font-weight="800">commit C' + (i + 1) + '</text>' +
-                    '<line x1="' + (x + 14) + '" y1="74" x2="' + (x + 146) + '" y2="74" stroke="var(--c-border)"/>' +
+                    '<line x1="' + (x + 14) + '" y1="74" x2="' + (x + 146) + '" y2="74" stroke="color-mix(in srgb,var(--course-accent) 30%,var(--c-border))"/>' +
                     '<text x="' + (x + 12) + '" y="94" fill="var(--c-fg-muted)" font-size="11">内容/tree:</text>' +
                     '<text x="' + (x + 12) + '" y="110" fill="var(--c-fg)" font-size="12" font-family="ui-monospace,monospace">' + sh[i] + '</text>' +
                     '<text x="' + (x + 12) + '" y="130" fill="var(--c-fg-muted)" font-size="11">父亲:</text>' +
-                    '<text x="' + (x + 12) + '" y="146" fill="' + (i === 0 ? 'var(--c-fg-muted)' : '#f0b429') + '" font-size="12" font-family="ui-monospace,monospace">' + ph[i] + '</text>' +
+                    '<text x="' + (x + 12) + '" y="146" fill="' + (i === 0 ? 'var(--c-fg-muted)' : '#f0b429') + '" font-size="12" font-weight="700" font-family="ui-monospace,monospace"' + (i === 0 ? '' : ' style="filter:drop-shadow(0 0 5px rgba(240,180,41,.7))"') + '>' + ph[i] + '</text>' +
                   '</g>'
                 );
               }).join('') +
-              // 箭头：C2→C1, C3→C2（儿子指向父亲）
-              '<line x1="230" y1="125" x2="192" y2="125" stroke="var(--course-accent)" stroke-width="2.5" marker-end="url(#c-math-mk3)"/>' +
-              '<line x1="430" y1="125" x2="392" y2="125" stroke="var(--course-accent)" stroke-width="2.5" marker-end="url(#c-math-mk3)"/>' +
               '<text x="211" y="172" text-anchor="middle" fill="var(--c-fg-muted)" font-size="11">指向父亲</text>' +
               '<text x="411" y="172" text-anchor="middle" fill="var(--c-fg-muted)" font-size="11">指向父亲</text>' +
               '<text x="110" y="30" text-anchor="middle" fill="var(--c-fg-muted)" font-size="11">最老</text>' +
@@ -342,6 +372,10 @@
 
             '<style>' +
             '.c-math-chain{display:block;margin:18px auto;max-width:620px;}' +
+            '.c-math-chain-node{animation:c-math-node-in .55s both cubic-bezier(.34,1.56,.64,1);}' +
+            '@keyframes c-math-node-in{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}' +
+            '.c-math-flow{stroke-dasharray:22 60;animation:c-math-stream 1.8s linear infinite;}' +
+            '@keyframes c-math-stream{from{stroke-dashoffset:82}to{stroke-dashoffset:0}}' +
             '</style>';
         }
       },
@@ -372,24 +406,26 @@
 
             '<style>' +
             '.c-math-tamper{display:flex;flex-wrap:wrap;align-items:stretch;justify-content:center;gap:0;margin:20px auto 10px;max-width:720px;}' +
-            '.c-math-cm{position:relative;width:118px;background:var(--c-bg-card);border:2px solid var(--c-border);border-radius:12px;padding:12px 10px;cursor:pointer;text-align:center;transition:border-color .25s,box-shadow .25s,background .25s;}' +
-            '.c-math-cm:hover{border-color:var(--course-accent);box-shadow:0 0 18px var(--course-accent-soft);}' +
+            '.c-math-cm{position:relative;width:118px;background:linear-gradient(160deg,var(--c-bg-card),color-mix(in srgb,var(--c-bg-card) 72%,#000));border:2px solid var(--c-border);border-radius:13px;padding:12px 10px;cursor:pointer;text-align:center;transition:border-color .25s,box-shadow .25s,background .25s,transform .25s;}' +
+            '.c-math-cm:hover{border-color:var(--course-accent);box-shadow:0 0 20px color-mix(in srgb,var(--course-accent) 24%,transparent);transform:translateY(-2px);}' +
             '.c-math-cm + .c-math-cm{margin-left:34px;}' +
-            '.c-math-cm + .c-math-cm::before{content:"";position:absolute;left:-32px;top:50%;width:30px;height:2px;background:var(--c-border);}' +
-            '.c-math-cm + .c-math-cm::after{content:"◀";position:absolute;left:-12px;top:50%;transform:translateY(-50%);font-size:10px;color:var(--c-border);}' +
+            '.c-math-cm + .c-math-cm::before{content:"";position:absolute;left:-32px;top:50%;width:30px;height:2.5px;border-radius:2px;background:color-mix(in srgb,var(--course-accent) 50%,var(--c-border));box-shadow:0 0 6px color-mix(in srgb,var(--course-accent) 30%,transparent);transition:background .25s,box-shadow .25s;}' +
+            '.c-math-cm + .c-math-cm::after{content:"◀";position:absolute;left:-13px;top:50%;transform:translateY(-50%);font-size:11px;color:var(--course-accent);transition:color .25s;}' +
             '.c-math-cm-label{font-family:ui-monospace,monospace;font-weight:800;font-size:13px;color:var(--c-fg);margin-bottom:6px;}' +
             '.c-math-cm-row{font-size:10px;color:var(--c-fg-muted);text-align:left;line-height:1.5;}' +
             '.c-math-cm-row b{color:var(--c-fg);font-weight:600;}' +
-            '.c-math-cm-hash{font-family:ui-monospace,monospace;font-size:11.5px;color:var(--course-accent);word-break:break-all;}' +
-            '.c-math-cm-parent{font-family:ui-monospace,monospace;font-size:11.5px;color:var(--c-fg-muted);word-break:break-all;}' +
+            '.c-math-cm-hash{font-family:ui-monospace,monospace;font-size:11.5px;color:var(--course-accent);word-break:break-all;text-shadow:0 0 8px color-mix(in srgb,var(--course-accent) 35%,transparent);transition:color .25s,text-shadow .25s;}' +
+            '.c-math-cm-parent{font-family:ui-monospace,monospace;font-size:11.5px;color:var(--c-fg-muted);word-break:break-all;transition:color .25s;}' +
             // 被篡改/塌方态
-            '.c-math-cm.broken{border-color:#f85149;background:rgba(248,81,73,0.08);animation:c-math-quake .35s ease;}' +
-            '.c-math-cm.broken .c-math-cm-hash,.c-math-cm.broken .c-math-cm-parent{color:#f85149;}' +
-            '.c-math-cm.origin{box-shadow:0 0 0 3px rgba(248,81,73,0.35);}' +
-            '.c-math-cm.broken + .c-math-cm.broken::before,.c-math-cm.broken + .c-math-cm.broken::after{color:#f85149;}' +
-            '.c-math-cm-tag{position:absolute;top:-10px;left:50%;transform:translateX(-50%);font-size:9px;font-weight:800;padding:2px 7px;border-radius:999px;white-space:nowrap;opacity:0;transition:opacity .2s;}' +
-            '.c-math-cm.origin .c-math-cm-tag{opacity:1;background:#f85149;color:#fff;}' +
-            '@keyframes c-math-quake{0%,100%{transform:translateX(0)}25%{transform:translateX(-3px)}75%{transform:translateX(3px)}}' +
+            '.c-math-cm.broken{border-color:#f85149;background:linear-gradient(160deg,rgba(248,81,73,0.12),rgba(248,81,73,0.04));box-shadow:0 0 20px rgba(248,81,73,0.3);animation:c-math-quake .35s ease;}' +
+            '.c-math-cm.broken .c-math-cm-hash{color:#f85149;text-shadow:0 0 9px rgba(248,81,73,.75);}' +
+            '.c-math-cm.broken .c-math-cm-parent{color:#f85149;}' +
+            '.c-math-cm.origin{box-shadow:0 0 0 3px rgba(248,81,73,0.4),0 0 26px rgba(248,81,73,0.45);}' +
+            '.c-math-cm.broken + .c-math-cm.broken::before{background:#f85149;box-shadow:0 0 8px rgba(248,81,73,.6);}' +
+            '.c-math-cm.broken + .c-math-cm.broken::after{color:#f85149;}' +
+            '.c-math-cm-tag{position:absolute;top:-11px;left:50%;transform:translateX(-50%);font-size:9px;font-weight:800;padding:2px 8px;border-radius:999px;white-space:nowrap;opacity:0;transition:opacity .2s;}' +
+            '.c-math-cm.origin .c-math-cm-tag{opacity:1;background:#f85149;color:#fff;box-shadow:0 0 12px rgba(248,81,73,.7);}' +
+            '@keyframes c-math-quake{0%,100%{transform:translateX(0)}20%{transform:translateX(-3px)}40%{transform:translateX(3px)}60%{transform:translateX(-2px)}80%{transform:translateX(2px)}}' +
             '.c-math-tamper-bar{display:flex;align-items:center;justify-content:center;gap:14px;flex-wrap:wrap;margin:8px auto 0;}' +
             '.c-math-tamper-status{font-size:12.5px;color:var(--c-fg-muted);}' +
             '#c-math-tamper-explain{max-width:700px;margin:20px auto 0;text-align:left;}' +
@@ -496,10 +532,11 @@
             '</div>' +
 
             '<style>' +
-            '.c-math-bc-emoji{font-size:42px;letter-spacing:6px;margin:4px 0 10px;}' +
+            '@keyframes c-math-breathe{0%,100%{opacity:.6;transform:scale(.97)}50%{opacity:1;transform:scale(1.03)}}' +
+            '.c-math-bc-emoji{font-size:42px;letter-spacing:6px;margin:4px 0 10px;filter:drop-shadow(0 0 12px color-mix(in srgb,var(--course-accent) 55%,transparent));animation:c-math-breathe 3.6s ease-in-out infinite;}' +
             '.c-math-bc-cmp{grid-template-columns:1fr auto 1fr;align-items:center;max-width:680px;margin:22px auto 0;gap:14px;}' +
             '.c-math-bc-h{font-weight:700;color:var(--c-fg);margin-bottom:6px;}' +
-            '.c-math-bc-eq{font-size:34px;color:var(--course-accent);font-weight:800;text-align:center;}' +
+            '.c-math-bc-eq{font-size:34px;color:var(--course-accent);font-weight:800;text-align:center;text-shadow:0 0 16px color-mix(in srgb,var(--course-accent) 50%,transparent);}' +
             '.c-math-bc-call{max-width:680px;margin:22px auto 0;text-align:left;}' +
             '</style>';
         }
@@ -520,34 +557,34 @@
               arrowDefs('c-math-mk4') +
               // 不可变的 commit DAG（主干 + 一个分叉）
               '<g>' +
-                // 主干 5 个节点
-                [0,1,2,3,4].map(function(i){
-                  var cx = 60 + i*100;
-                  return '<circle cx="'+cx+'" cy="160" r="16" fill="var(--c-bg-card)" stroke="var(--course-accent)" stroke-width="2.5"/>';
-                }).join('') +
-                // 主干连线（箭头指向父亲，即往左）
+                // 主干连线（先画，箭头指向父亲，即往左）
                 [1,2,3,4].map(function(i){
                   var x2 = 60 + (i-1)*100 + 18, x1 = 60 + i*100 - 18;
-                  return '<line x1="'+x1+'" y1="160" x2="'+x2+'" y2="160" stroke="var(--course-accent)" stroke-width="2" marker-end="url(#c-math-mk4)"/>';
+                  return '<line x1="'+x1+'" y1="160" x2="'+x2+'" y2="160" stroke="var(--course-accent)" stroke-width="2.5" stroke-linecap="round" marker-end="url(#c-math-mk4)"/>';
+                }).join('') +
+                '<line x1="346" y1="98" x2="276" y2="150" stroke="var(--course-accent)" stroke-width="2.5" stroke-linecap="round" marker-end="url(#c-math-mk4)"/>' +
+                '<line x1="446" y1="90" x2="378" y2="90" stroke="var(--course-accent)" stroke-width="2.5" stroke-linecap="round" marker-end="url(#c-math-mk4)"/>' +
+                // 主干 5 个节点（发光）
+                [0,1,2,3,4].map(function(i){
+                  var cx = 60 + i*100;
+                  return '<circle class="c-math-dagnode" style="animation-delay:'+(i*90)+'ms" cx="'+cx+'" cy="160" r="16" fill="url(#c-math-mk4-grad)" stroke="var(--course-accent)" stroke-width="2.5" filter="url(#c-math-mk4-glow)"/>';
                 }).join('') +
                 // 一个分叉：从第 3 个节点(index2,cx=260)往上分出两个
-                '<circle cx="360" cy="90" r="16" fill="var(--c-bg-card)" stroke="var(--course-accent)" stroke-width="2.5"/>' +
-                '<circle cx="460" cy="90" r="16" fill="var(--c-bg-card)" stroke="var(--course-accent)" stroke-width="2.5"/>' +
-                '<line x1="346" y1="98" x2="276" y2="150" stroke="var(--course-accent)" stroke-width="2" marker-end="url(#c-math-mk4)"/>' +
-                '<line x1="446" y1="90" x2="378" y2="90" stroke="var(--course-accent)" stroke-width="2" marker-end="url(#c-math-mk4)"/>' +
+                '<circle class="c-math-dagnode" style="animation-delay:450ms" cx="360" cy="90" r="16" fill="url(#c-math-mk4-grad)" stroke="var(--course-accent)" stroke-width="2.5" filter="url(#c-math-mk4-glow)"/>' +
+                '<circle class="c-math-dagnode" style="animation-delay:540ms" cx="460" cy="90" r="16" fill="url(#c-math-mk4-grad)" stroke="var(--course-accent)" stroke-width="2.5" filter="url(#c-math-mk4-glow)"/>' +
               '</g>' +
               // 分支 pill（像便利贴贴上去）
               '<g font-family="ui-monospace,monospace" font-size="12" font-weight="700">' +
-                '<rect x="430" y="186" width="78" height="26" rx="13" fill="var(--course-accent)"/>' +
+                '<rect x="430" y="186" width="78" height="26" rx="13" fill="var(--course-accent)" filter="url(#c-math-mk4-glow)"/>' +
                 '<text x="469" y="204" text-anchor="middle" fill="#0d1117">main</text>' +
-                '<line x1="460" y1="186" x2="460" y2="178" stroke="var(--course-accent)" stroke-width="2"/>' +
-                '<rect x="424" y="40" width="90" height="26" rx="13" fill="#a371f7"/>' +
+                '<line x1="460" y1="186" x2="460" y2="178" stroke="var(--course-accent)" stroke-width="2.5" stroke-linecap="round"/>' +
+                '<rect x="424" y="40" width="90" height="26" rx="13" fill="#a371f7" filter="url(#c-math-mk4-glow)"/>' +
                 '<text x="469" y="58" text-anchor="middle" fill="#fff">feature</text>' +
-                '<line x1="460" y1="66" x2="460" y2="74" stroke="#a371f7" stroke-width="2"/>' +
+                '<line x1="460" y1="66" x2="460" y2="74" stroke="#a371f7" stroke-width="2.5" stroke-linecap="round"/>' +
               '</g>' +
               // HEAD 指针指向 main
               '<g font-family="ui-monospace,monospace" font-size="12" font-weight="800">' +
-                '<rect x="430" y="220" width="78" height="24" rx="6" fill="var(--c-bg-soft)" stroke="var(--course-accent)" stroke-dasharray="4 3"/>' +
+                '<rect x="430" y="220" width="78" height="24" rx="7" fill="var(--c-bg-soft)" stroke="var(--course-accent)" stroke-width="1.5" stroke-dasharray="4 3"/>' +
                 '<text x="469" y="237" text-anchor="middle" fill="var(--course-accent)">HEAD →</text>' +
                 '<line x1="469" y1="220" x2="469" y2="214" stroke="var(--course-accent)" stroke-width="1.5" stroke-dasharray="3 2"/>' +
               '</g>' +
@@ -569,6 +606,8 @@
 
             '<style>' +
             '.c-math-branch{display:block;margin:16px auto;max-width:620px;}' +
+            '.c-math-dagnode{transform-box:fill-box;transform-origin:center;animation:c-math-dag-in .5s both cubic-bezier(.34,1.56,.64,1);}' +
+            '@keyframes c-math-dag-in{from{opacity:0;transform:scale(.4)}to{opacity:1;transform:none}}' +
             '.c-math-2col{grid-template-columns:1fr 1fr;max-width:680px;margin:14px auto 0;}' +
             '.c-math-bh{font-weight:700;color:var(--c-fg);margin-bottom:6px;}' +
             '</style>';
@@ -618,9 +657,10 @@
 
             '<style>' +
             '.c-math-recap{max-width:680px;margin:18px auto 0;display:flex;flex-direction:column;gap:10px;}' +
-            '.c-math-recap-row{display:flex;gap:14px;align-items:flex-start;background:var(--c-bg-card);border:1px solid var(--c-border);border-left:3px solid var(--course-accent);border-radius:10px;padding:13px 16px;animation:c-math-slidein .5s both cubic-bezier(.34,1.56,.64,1);}' +
+            '.c-math-recap-row{display:flex;gap:14px;align-items:flex-start;background:linear-gradient(160deg,var(--c-bg-card),color-mix(in srgb,var(--c-bg-card) 75%,#000));border:1px solid var(--c-border);border-left:3px solid var(--course-accent);border-radius:10px;padding:13px 16px;box-shadow:-4px 0 18px color-mix(in srgb,var(--course-accent) 8%,transparent);transition:border-color .25s,box-shadow .25s;animation:c-math-slidein .5s both cubic-bezier(.34,1.56,.64,1);}' +
+            '.c-math-recap-row:hover{border-left-color:var(--course-accent);box-shadow:-4px 0 24px color-mix(in srgb,var(--course-accent) 18%,transparent);}' +
             '@keyframes c-math-slidein{from{opacity:0;transform:translateX(-14px)}to{opacity:1;transform:none}}' +
-            '.c-math-recap-ico{font-size:24px;line-height:1.2;flex-shrink:0;}' +
+            '.c-math-recap-ico{font-size:24px;line-height:1.2;flex-shrink:0;filter:drop-shadow(0 0 6px color-mix(in srgb,var(--course-accent) 40%,transparent));}' +
             '.c-math-recap-q{font-size:14px;color:var(--c-fg);font-weight:600;margin-bottom:4px;}' +
             '.c-math-recap-a{font-size:13px;color:var(--c-fg-muted);line-height:1.5;}' +
             '.c-math-recap-sum{max-width:680px;margin:20px auto 0;text-align:left;}' +
@@ -637,13 +677,22 @@
           stage.innerHTML =
             '<div class="deck-center c-math-final">' +
               '<svg class="c-math-final-svg" viewBox="0 0 320 200" width="280" aria-hidden="true">' +
+                arrowDefs('c-math-mk5') +
+                // 星点（小星图）
+                '<g fill="var(--course-accent)">' +
+                  '<circle class="c-math-star" cx="44" cy="40" r="1.6" style="animation-delay:0s"/>' +
+                  '<circle class="c-math-star" cx="86" cy="22" r="1.2" style="animation-delay:.5s"/>' +
+                  '<circle class="c-math-star" cx="270" cy="44" r="1.5" style="animation-delay:1s"/>' +
+                  '<circle class="c-math-star" cx="296" cy="86" r="1.2" style="animation-delay:1.4s"/>' +
+                  '<circle class="c-math-star" cx="160" cy="30" r="1.3" style="animation-delay:.8s"/>' +
+                '</g>' +
                 // 一座改不动的山
-                '<path d="M20,170 L110,60 L170,120 L220,50 L300,170 Z" fill="var(--c-bg-soft)" stroke="var(--course-accent)" stroke-width="2"/>' +
-                '<path d="M110,60 L132,84 L150,70 L170,120 L110,60Z" fill="rgba(227,179,65,0.15)"/>' +
+                '<path d="M20,170 L110,60 L170,120 L220,50 L300,170 Z" fill="url(#c-math-mk5-grad)" stroke="var(--course-accent)" stroke-width="2.2" stroke-linejoin="round"/>' +
+                '<path d="M110,60 L132,84 L150,70 L170,120 L110,60Z" fill="rgba(227,179,65,0.18)"/>' +
                 // 山上一面旗（旗杆 + 飘动的旗）
                 '<line x1="222" y1="50" x2="222" y2="14" stroke="var(--c-fg)" stroke-width="2.5" stroke-linecap="round"/>' +
-                '<path id="c-math-flag" d="M222,18 Q244,12 266,18 Q244,30 222,30 Z" fill="var(--course-accent)"/>' +
-                '<circle cx="222" cy="50" r="4" fill="var(--course-accent)"/>' +
+                '<path id="c-math-flag" d="M222,18 Q244,12 266,18 Q244,30 222,30 Z" fill="var(--course-accent)" filter="url(#c-math-mk5-glow)"/>' +
+                '<circle cx="222" cy="50" r="4.5" fill="var(--course-accent)" filter="url(#c-math-mk5-glow)"/>' +
               '</svg>' +
 
               '<h1 class="deck-h1 c-math-final-quote">' +
@@ -666,13 +715,16 @@
 
             '<style>' +
             '.c-math-final{padding-top:6px;}' +
-            '.c-math-final-svg{display:block;margin:0 auto 14px;filter:drop-shadow(0 0 18px var(--course-accent-soft));}' +
+            '.c-math-final-svg{display:block;margin:0 auto 14px;filter:drop-shadow(0 0 22px color-mix(in srgb,var(--course-accent) 28%,transparent));}' +
+            '.c-math-star{animation:c-math-twinkle 2.6s ease-in-out infinite;}' +
+            '@keyframes c-math-twinkle{0%,100%{opacity:.25}50%{opacity:1}}' +
             '#c-math-flag{transform-box:fill-box;transform-origin:left center;animation:c-math-wave 2.2s ease-in-out infinite;}' +
             '@keyframes c-math-wave{0%,100%{transform:skewY(0) scaleX(1)}50%{transform:skewY(-4deg) scaleX(.94)}}' +
             '.c-math-final-quote{font-size:34px;line-height:1.35;margin:6px auto 0;max-width:680px;}' +
             '.c-math-final-sub{margin-top:18px;color:var(--c-fg-muted);max-width:600px;}' +
             '.c-math-final-tags{display:flex;justify-content:center;flex-wrap:wrap;gap:10px;margin-top:24px;}' +
-            '.c-math-final-tag{font-family:ui-monospace,monospace;font-size:13px;color:var(--course-accent);background:var(--c-bg-soft);border:1px solid var(--c-border);border-radius:999px;padding:5px 14px;}' +
+            '.c-math-final-tag{font-family:ui-monospace,monospace;font-size:13px;color:var(--course-accent);background:var(--c-bg-soft);border:1px solid color-mix(in srgb,var(--course-accent) 30%,var(--c-border));border-radius:999px;padding:5px 14px;box-shadow:0 0 14px color-mix(in srgb,var(--course-accent) 12%,transparent);transition:border-color .2s,box-shadow .2s;}' +
+            '.c-math-final-tag:hover{border-color:var(--course-accent);box-shadow:0 0 18px color-mix(in srgb,var(--course-accent) 28%,transparent);}' +
             '</style>';
         }
       }

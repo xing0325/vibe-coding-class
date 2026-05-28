@@ -10,25 +10,30 @@
     s.id = 'c-repo-style';
     s.textContent = [
       '.c-repo-flow{display:flex;align-items:center;justify-content:center;gap:6px;flex-wrap:wrap;margin:18px 0;}',
-      '.c-repo-node{background:var(--c-bg-soft);border:1px solid var(--c-border);border-radius:14px;padding:16px 18px;text-align:center;min-width:120px;}',
+      '.c-repo-node{background:rgba(255,255,255,0.04);border:1px solid var(--c-border);border-radius:14px;padding:16px 18px;text-align:center;min-width:120px;transition:border-color .2s,box-shadow .2s,transform .2s;}',
+      '.c-repo-node:hover{border-color:color-mix(in srgb,var(--course-accent) 50%,var(--c-border));box-shadow:0 0 22px var(--course-accent-soft);transform:translateY(-2px);}',
+      '.c-repo-node svg{filter:drop-shadow(0 0 6px var(--course-accent-soft));}',
       '.c-repo-node .lbl{font-size:13px;color:var(--c-fg-muted);margin-top:6px;}',
-      '.c-repo-node .tag{font-size:11px;color:var(--course-accent);font-family:ui-monospace,SFMono-Regular,Menlo,monospace;}',
-      '.c-repo-arrow{display:flex;flex-direction:column;align-items:center;color:var(--course-accent);font-size:12px;font-weight:600;min-width:74px;}',
-      '.c-repo-arrow .line{font-size:22px;line-height:1;}',
+      '.c-repo-node .tag{font-size:11px;color:var(--course-accent);font-family:var(--font-mono,ui-monospace,SFMono-Regular,Menlo,monospace);letter-spacing:0.03em;}',
+      '.c-repo-arrow{display:flex;flex-direction:column;align-items:center;color:var(--course-accent);font-size:12px;font-weight:600;min-width:74px;font-family:var(--font-mono,ui-monospace,monospace);}',
+      '.c-repo-arrow .line{font-size:22px;line-height:1;filter:drop-shadow(0 0 6px var(--course-accent-soft));}',
       '.c-repo-brands{display:flex;gap:14px;flex-wrap:wrap;justify-content:center;margin:20px 0;}',
-      '.c-repo-brand{background:var(--c-bg-card);border:1px solid var(--c-border);border-radius:16px;padding:18px 20px;display:flex;flex-direction:column;align-items:center;gap:10px;width:160px;transition:border-color .15s,transform .15s;}',
-      '.c-repo-brand.is-hub{border-color:var(--course-accent);box-shadow:0 0 0 1px var(--course-accent);}',
+      '.c-repo-brand{background:rgba(255,255,255,0.04);border:1px solid var(--c-border);border-radius:16px;padding:18px 20px;display:flex;flex-direction:column;align-items:center;gap:10px;width:160px;transition:border-color .2s,transform .2s,box-shadow .2s;}',
+      '.c-repo-brand:hover{transform:translateY(-3px);border-color:color-mix(in srgb,var(--course-accent) 45%,var(--c-border));box-shadow:0 10px 30px rgba(0,0,0,0.4);}',
+      '.c-repo-brand.is-hub{border-color:var(--course-accent);box-shadow:0 0 0 1px var(--course-accent),0 0 28px var(--course-accent-soft);}',
       '.c-repo-brand .name{font-weight:700;font-size:15px;}',
       '.c-repo-brand .note{font-size:12px;color:var(--c-fg-muted);text-align:center;}',
       '.c-repo-hub-btn{margin-top:14px;}',
       '.c-repo-ignore-toggle{display:flex;gap:8px;flex-wrap:wrap;margin:14px 0;}',
-      '.c-repo-chip{cursor:pointer;border:1px solid var(--c-border);background:var(--c-bg-soft);color:var(--c-fg);border-radius:999px;padding:7px 13px;font-size:13px;user-select:none;transition:.15s;}',
-      '.c-repo-chip.on{background:var(--course-accent-soft);border-color:var(--course-accent);color:var(--c-fg);}',
+      '.c-repo-chip{cursor:pointer;border:1px solid var(--c-border);background:rgba(255,255,255,0.04);color:var(--c-fg);border-radius:999px;padding:7px 13px;font-size:13px;font-family:var(--font-mono,ui-monospace,monospace);user-select:none;transition:.18s;}',
+      '.c-repo-chip:hover{border-color:color-mix(in srgb,var(--course-accent) 45%,var(--c-border));}',
+      '.c-repo-chip.on{background:var(--course-accent-soft);border-color:var(--course-accent);color:var(--c-fg);box-shadow:0 0 14px var(--course-accent-soft);}',
       '.c-repo-chip .x{color:#f85149;font-weight:700;}',
       '.c-repo-chip.on .x{color:var(--course-accent);}',
       '.c-repo-summary{display:flex;flex-direction:column;gap:10px;margin-top:8px;}',
-      '.c-repo-step{display:flex;align-items:center;gap:14px;background:var(--c-bg-card);border:1px solid var(--c-border);border-left:4px solid var(--course-accent);border-radius:12px;padding:14px 16px;}',
-      '.c-repo-step .num{flex:none;width:30px;height:30px;border-radius:50%;background:var(--course-accent-soft);color:var(--course-accent);display:flex;align-items:center;justify-content:center;font-weight:700;}',
+      '.c-repo-step{display:flex;align-items:center;gap:14px;background:rgba(255,255,255,0.04);border:1px solid var(--c-border);border-left:4px solid var(--course-accent);border-radius:12px;padding:14px 16px;transition:border-color .2s,box-shadow .2s,transform .2s;box-shadow:inset 0 0 40px color-mix(in srgb,var(--course-accent) 5%,transparent);}',
+      '.c-repo-step:hover{transform:translateX(3px);box-shadow:inset 0 0 40px color-mix(in srgb,var(--course-accent) 9%,transparent);}',
+      '.c-repo-step .num{flex:none;width:30px;height:30px;border-radius:50%;background:var(--course-accent-soft);color:var(--course-accent);border:1px solid color-mix(in srgb,var(--course-accent) 40%,transparent);box-shadow:0 0 12px var(--course-accent-soft);display:flex;align-items:center;justify-content:center;font-weight:700;font-family:var(--font-mono,ui-monospace,monospace);}',
       '.c-repo-step .txt strong{color:var(--course-accent);}'
     ].join('\n');
     document.head.appendChild(s);
@@ -217,15 +222,23 @@
               '</g>'
             );
           });
-          // 连线（从中心到各点）
+          // 连线（从中心到各点；星图连线感，accent 着色 + 端点圆润）
           var lines = positions.map(function (p) {
             return '<line x1="' + cx + '" y1="' + cy + '" x2="' + p[0] + '" y2="' + p[1] + '" ' +
-              'stroke="var(--c-border)" stroke-width="1.5" stroke-dasharray="3 4"/>';
+              'stroke="var(--course-accent)" stroke-width="1.5" stroke-linecap="round" stroke-dasharray="3 5" opacity="0.4"/>';
           }).join('');
           return '<svg width="' + W + '" height="' + H + '" viewBox="0 0 ' + W + ' ' + H + '">' +
+            '<defs>' +
+              '<filter id="c-repo-hubglow" x="-80%" y="-80%" width="260%" height="260%">' +
+                '<feGaussianBlur stdDeviation="4" result="b"/>' +
+                '<feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>' +
+              '</filter>' +
+            '</defs>' +
             lines + ring.join('') +
-            '<circle cx="' + cx + '" cy="' + cy + '" r="36" fill="var(--c-bg-card)" stroke="var(--course-accent)" stroke-width="2.5"/>' +
-            '<g transform="translate(' + (cx - 22) + ',' + (cy - 22) + ')">' + svgGitHubMark(44) + '</g>' +
+            '<g filter="url(#c-repo-hubglow)">' +
+              '<circle cx="' + cx + '" cy="' + cy + '" r="36" fill="rgba(255,255,255,0.05)" stroke="var(--course-accent)" stroke-width="2.5"/>' +
+              '<g transform="translate(' + (cx - 22) + ',' + (cy - 22) + ')">' + svgGitHubMark(44) + '</g>' +
+            '</g>' +
             '</svg>';
         }
       },

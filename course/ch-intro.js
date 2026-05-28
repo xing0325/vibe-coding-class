@@ -12,13 +12,22 @@
     var s = size || 120;
     return (
       '<svg class="c-intro-gitlogo" viewBox="0 0 120 120" width="' + s + '" height="' + s + '" aria-hidden="true">' +
-        '<line x1="60" y1="92" x2="60" y2="60" stroke="var(--course-accent)" stroke-width="6" stroke-linecap="round"/>' +
-        '<line x1="60" y1="60" x2="92" y2="34" stroke="var(--course-accent)" stroke-width="6" stroke-linecap="round"/>' +
-        // 主干上的点
-        '<circle cx="60" cy="92" r="12" fill="var(--course-accent)" stroke="#fff" stroke-width="3"/>' +
-        '<circle cx="60" cy="60" r="12" fill="var(--course-accent)" stroke="#fff" stroke-width="3"/>' +
-        // 分支出去的点
-        '<circle cx="92" cy="34" r="12" fill="var(--course-accent)" stroke="#fff" stroke-width="3"/>' +
+        '<defs>' +
+          '<filter id="c-intro-glow" x="-60%" y="-60%" width="220%" height="220%">' +
+            '<feGaussianBlur stdDeviation="3.2" result="b"/>' +
+            '<feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>' +
+          '</filter>' +
+        '</defs>' +
+        '<g filter="url(#c-intro-glow)">' +
+          // 主干（略亮）+ 分支线（端点圆润）
+          '<line x1="60" y1="92" x2="60" y2="60" stroke="var(--course-accent)" stroke-width="6" stroke-linecap="round"/>' +
+          '<line x1="60" y1="60" x2="92" y2="34" stroke="var(--course-accent)" stroke-width="6" stroke-linecap="round" opacity="0.82"/>' +
+          // 主干上的点
+          '<circle cx="60" cy="92" r="12" fill="var(--course-accent)" stroke="#fff" stroke-width="2.5"/>' +
+          '<circle cx="60" cy="60" r="12" fill="var(--course-accent)" stroke="#fff" stroke-width="2.5"/>' +
+          // 分支出去的点
+          '<circle cx="92" cy="34" r="12" fill="var(--course-accent)" stroke="#fff" stroke-width="2.5"/>' +
+        '</g>' +
       '</svg>'
     );
   }
@@ -146,11 +155,12 @@
             '</div>' +
             '<style>' +
             '.c-intro-files{display:flex;align-items:center;justify-content:center;flex-wrap:wrap;gap:6px;margin:26px 0;}' +
-            '.c-intro-file{display:flex;flex-direction:column;align-items:center;gap:4px;background:var(--c-bg-card);border:1px solid var(--c-border);border-radius:12px;padding:12px 14px;min-width:78px;animation:c-intro-rise .5s both cubic-bezier(.34,1.56,.64,1);}' +
+            '.c-intro-file{display:flex;flex-direction:column;align-items:center;gap:4px;background:rgba(255,255,255,0.04);border:1px solid var(--c-border);border-radius:12px;padding:12px 14px;min-width:78px;transition:border-color .2s,box-shadow .2s,transform .2s;animation:c-intro-rise .5s both cubic-bezier(.34,1.56,.64,1);}' +
+            '.c-intro-file:hover{border-color:color-mix(in srgb,var(--course-accent) 55%,var(--c-border));box-shadow:0 0 18px var(--course-accent-soft);transform:translateY(-2px);}' +
             '.c-intro-file-ico{font-size:30px;line-height:1;}' +
             '.c-intro-file-name{font-size:12px;color:var(--c-fg);white-space:nowrap;}' +
-            '.c-intro-file-num{font-size:11px;color:var(--course-accent);font-weight:700;font-family:ui-monospace,monospace;}' +
-            '.c-intro-arrow{color:var(--c-fg-muted);font-size:20px;}' +
+            '.c-intro-file-num{font-size:11px;color:var(--course-accent);font-weight:700;font-family:var(--font-mono,ui-monospace,monospace);letter-spacing:0.04em;}' +
+            '.c-intro-arrow{color:color-mix(in srgb,var(--course-accent) 70%,var(--c-fg-muted));font-size:20px;}' +
             '@keyframes c-intro-rise{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}' +
             '</style>';
         }
@@ -197,21 +207,27 @@
                 '<marker id="c-intro-ah" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">' +
                   '<path d="M0,0 L8,4 L0,8 Z" fill="#f85149"/>' +
                 '</marker>' +
+                '<filter id="c-intro-folderglow" x="-80%" y="-80%" width="260%" height="260%">' +
+                  '<feGaussianBlur stdDeviation="4" result="b"/>' +
+                  '<feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>' +
+                '</filter>' +
               '</defs>' +
-              // 中间被抢的文件夹
-              '<rect x="216" y="120" width="88" height="62" rx="10" fill="var(--c-bg-soft)" stroke="var(--course-accent)" stroke-width="2"/>' +
-              '<text x="260" y="156" text-anchor="middle" font-size="30">📁</text>' +
-              // 十团乱飞的小版本块 + 互相冲突的红箭头
-              '<g font-size="11" fill="var(--c-fg-muted)" font-family="ui-monospace,monospace">' +
-                '<g><rect x="20"  y="20"  width="64" height="26" rx="6" fill="var(--c-bg-card)" stroke="var(--c-border)"/><text x="52"  y="37" text-anchor="middle">小A_v3</text></g>' +
-                '<g><rect x="430" y="18"  width="70" height="26" rx="6" fill="var(--c-bg-card)" stroke="var(--c-border)"/><text x="465" y="35" text-anchor="middle">小B_最终</text></g>' +
-                '<g><rect x="8"   y="150" width="78" height="26" rx="6" fill="var(--c-bg-card)" stroke="var(--c-border)"/><text x="47"  y="167" text-anchor="middle">小C_改改改</text></g>' +
-                '<g><rect x="430" y="150" width="78" height="26" rx="6" fill="var(--c-bg-card)" stroke="var(--c-border)"/><text x="469" y="167" text-anchor="middle">小D_新版本</text></g>' +
-                '<g><rect x="30"  y="262" width="72" height="26" rx="6" fill="var(--c-bg-card)" stroke="var(--c-border)"/><text x="66"  y="279" text-anchor="middle">小E_别动</text></g>' +
-                '<g><rect x="420" y="262" width="90" height="26" rx="6" fill="var(--c-bg-card)" stroke="var(--c-border)"/><text x="465" y="279" text-anchor="middle">小F_这才是对的</text></g>' +
+              // 中间被抢的文件夹（发光中枢）
+              '<g filter="url(#c-intro-folderglow)">' +
+                '<rect x="216" y="120" width="88" height="62" rx="12" fill="rgba(255,255,255,0.04)" stroke="var(--course-accent)" stroke-width="2.5"/>' +
+                '<text x="260" y="156" text-anchor="middle" font-size="30">📁</text>' +
               '</g>' +
-              // 乱成一团、互相打架的箭头
-              '<g stroke="#f85149" stroke-width="2" fill="none" opacity="0.9" marker-end="url(#c-intro-ah)">' +
+              // 十团乱飞的小版本块 + 互相冲突的红箭头
+              '<g class="c-intro-chaos-tags" font-size="11" fill="#d6e0f0">' +
+                '<g><rect x="20"  y="20"  width="64" height="26" rx="8" fill="rgba(255,255,255,0.04)" stroke="var(--c-border)"/><text x="52"  y="37" text-anchor="middle">小A_v3</text></g>' +
+                '<g><rect x="430" y="18"  width="70" height="26" rx="8" fill="rgba(255,255,255,0.04)" stroke="var(--c-border)"/><text x="465" y="35" text-anchor="middle">小B_最终</text></g>' +
+                '<g><rect x="8"   y="150" width="78" height="26" rx="8" fill="rgba(255,255,255,0.04)" stroke="var(--c-border)"/><text x="47"  y="167" text-anchor="middle">小C_改改改</text></g>' +
+                '<g><rect x="430" y="150" width="78" height="26" rx="8" fill="rgba(255,255,255,0.04)" stroke="var(--c-border)"/><text x="469" y="167" text-anchor="middle">小D_新版本</text></g>' +
+                '<g><rect x="30"  y="262" width="72" height="26" rx="8" fill="rgba(255,255,255,0.04)" stroke="var(--c-border)"/><text x="66"  y="279" text-anchor="middle">小E_别动</text></g>' +
+                '<g><rect x="420" y="262" width="90" height="26" rx="8" fill="rgba(255,255,255,0.04)" stroke="var(--c-border)"/><text x="465" y="279" text-anchor="middle">小F_这才是对的</text></g>' +
+              '</g>' +
+              // 乱成一团、互相打架的箭头（端点圆润）
+              '<g stroke="#f85149" stroke-width="2.5" fill="none" opacity="0.9" stroke-linecap="round" marker-end="url(#c-intro-ah)">' +
                 '<path d="M84,40 C150,70 180,110 214,128"/>' +
                 '<path d="M455,44 C400,80 340,110 306,130"/>' +
                 '<path d="M86,160 C140,150 180,150 214,151"/>' +
@@ -234,6 +250,7 @@
             '</div>' +
             '<style>' +
             '.c-intro-chaos{display:block;margin:14px auto;max-width:560px;}' +
+            '.c-intro-chaos .c-intro-chaos-tags text{font-family:var(--font-mono);}' +
             '.c-intro-chaos path[stroke="#f85149"]{animation:c-intro-shake 1.6s ease-in-out infinite;}' +
             '@keyframes c-intro-shake{0%,100%{opacity:.55}50%{opacity:1}}' +
             '</style>';
@@ -294,10 +311,10 @@
             '</div>' +
             '<style>' +
             '.c-intro-transform{margin:30px auto 16px;display:flex;justify-content:center;}' +
-            '.c-intro-folder{position:relative;display:flex;flex-direction:column;align-items:center;gap:8px;padding:26px 38px;border-radius:18px;background:var(--c-bg-card);border:2px solid var(--c-border);transition:all .5s cubic-bezier(.34,1.56,.64,1);}' +
+            '.c-intro-folder{position:relative;display:flex;flex-direction:column;align-items:center;gap:8px;padding:26px 38px;border-radius:18px;background:rgba(255,255,255,0.04);border:2px solid var(--c-border);transition:all .5s cubic-bezier(.34,1.56,.64,1);}' +
             '.c-intro-folder-ico{font-size:60px;line-height:1;transition:transform .5s ease;}' +
             '.c-intro-folder-label{font-size:14px;color:var(--c-fg-muted);font-weight:600;}' +
-            '.c-intro-badge{position:absolute;top:-12px;right:-12px;background:var(--course-accent);color:#fff;font-size:12px;font-weight:700;padding:4px 9px;border-radius:999px;font-family:ui-monospace,monospace;opacity:0;transform:scale(0);transition:all .45s cubic-bezier(.34,1.56,.64,1);}' +
+            '.c-intro-badge{position:absolute;top:-12px;right:-12px;background:var(--course-accent-soft);color:var(--course-accent);border:1px solid var(--course-accent);font-size:12px;font-weight:700;padding:4px 10px;border-radius:999px;font-family:var(--font-mono,ui-monospace,monospace);box-shadow:0 0 14px var(--course-accent-soft);opacity:0;transform:scale(0);transition:all .45s cubic-bezier(.34,1.56,.64,1);}' +
             '.c-intro-transform.on .c-intro-folder{border-color:var(--course-accent);box-shadow:0 0 28px var(--course-accent-soft);}' +
             '.c-intro-transform.on .c-intro-folder-ico{transform:scale(1.08) rotate(-4deg);}' +
             '.c-intro-transform.on .c-intro-badge{opacity:1;transform:scale(1);}' +

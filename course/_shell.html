@@ -35,9 +35,8 @@
     transition: background 0.6s ease;
   }
   body::after {
-    content: ''; position: fixed; inset: 0; z-index: -2; pointer-events: none; opacity: 0.4;
+    content: ''; position: fixed; inset: 0; z-index: -2; pointer-events: none; opacity: 0.05;
     background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.55'/%3E%3C/svg%3E");
-    mix-blend-mode: overlay;
   }
   #starfield { position: fixed; inset: 0; z-index: -1; pointer-events: none; overflow: hidden; }
   .star { position: absolute; border-radius: 50%; background: #fff; opacity: 0.5; animation: twinkle var(--dur,4s) ease-in-out infinite; box-shadow: 0 0 6px rgba(255,255,255,0.6); }
@@ -99,7 +98,7 @@
 
   #course-deck { display: none; flex-direction: column; min-height: 100vh; }
   #course-deck.active { display: flex; }
-  .deck-topbar { display: flex; align-items: center; gap: 16px; padding: 18px 32px; border-bottom: 1px solid var(--c-border); position: sticky; top: 0; z-index: 50; background: color-mix(in srgb, var(--c-bg) 82%, transparent); backdrop-filter: blur(16px); }
+  .deck-topbar { display: flex; align-items: center; gap: 16px; padding: 18px 32px; border-bottom: 1px solid var(--c-border); position: sticky; top: 0; z-index: 50; background: color-mix(in srgb, var(--c-bg) 82%, transparent); backdrop-filter: blur(9px); }
   .deck-topbar .dt-back { display: inline-flex; align-items: center; gap: 7px; cursor: pointer; font-size: 13px; color: var(--c-fg); background: var(--c-bg-soft); border: 1px solid var(--c-border); padding: 8px 14px; border-radius: 9px; transition: all 0.16s; font-family: var(--font-mono); }
   .deck-topbar .dt-back:hover { border-color: var(--course-accent); color: var(--course-accent); }
   .deck-topbar .dt-title { font-weight: 700; font-size: 16px; display: flex; align-items: center; gap: 9px; }

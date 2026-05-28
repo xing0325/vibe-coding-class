@@ -33,18 +33,28 @@
     var parts = [];
     parts.push('<svg class="c-commit-chain" viewBox="0 0 ' + w + ' ' + h + '" width="100%" aria-hidden="true">');
 
-    // 连线（先画，垫底）
+    // 发光滤镜（节点柔和光晕）
+    parts.push(
+      '<defs>' +
+        '<filter id="c-commit-glow" x="-80%" y="-80%" width="260%" height="260%">' +
+          '<feGaussianBlur stdDeviation="3.4" result="b"/>' +
+          '<feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>' +
+        '</filter>' +
+      '</defs>'
+    );
+
+    // 连线（先画，垫底；主干一根，端点圆润）
     for (var i = 0; i < n - 1; i++) {
       var x1 = pad + gap * i, x2 = pad + gap * (i + 1);
-      parts.push('<line x1="' + x1 + '" y1="' + cy + '" x2="' + x2 + '" y2="' + cy + '" stroke="var(--course-accent)" stroke-width="4"/>');
+      parts.push('<line x1="' + x1 + '" y1="' + cy + '" x2="' + x2 + '" y2="' + cy + '" stroke="var(--course-accent)" stroke-width="3" stroke-linecap="round" opacity="0.9"/>');
     }
 
     // 顶部推文版本名 + 连到对应 commit 的虚线
     if (opts.topLabels) {
       for (var t = 0; t < n; t++) {
         var lx = pad + gap * t;
-        parts.push('<line x1="' + lx + '" y1="48" x2="' + lx + '" y2="' + (cy - r - 4) + '" stroke="var(--c-fg-muted)" stroke-width="1.5" stroke-dasharray="3 4"/>');
-        parts.push('<text x="' + lx + '" y="40" text-anchor="middle" font-size="13" fill="var(--c-fg)" font-weight="600">' + opts.topLabels[t] + '</text>');
+        parts.push('<line x1="' + lx + '" y1="48" x2="' + lx + '" y2="' + (cy - r - 4) + '" stroke="var(--c-fg-muted)" stroke-width="1.5" stroke-dasharray="3 4" stroke-linecap="round"/>');
+        parts.push('<text x="' + lx + '" y="40" text-anchor="middle" font-size="13" fill="#d6e0f0" font-weight="600">' + opts.topLabels[t] + '</text>');
       }
     }
 
@@ -56,13 +66,13 @@
       if (opts.interactive) {
         g += '<circle class="c-commit-hit" cx="' + cx + '" cy="' + cy + '" r="30" fill="transparent"/>';
       }
-      g += '<circle class="c-commit-dot" cx="' + cx + '" cy="' + cy + '" r="' + r + '" fill="var(--course-accent)" stroke="#fff" stroke-width="3"/>';
+      g += '<circle class="c-commit-dot" cx="' + cx + '" cy="' + cy + '" r="' + r + '" fill="var(--course-accent)" stroke="#fff" stroke-width="2" filter="url(#c-commit-glow)"/>';
       g += '</g>';
       parts.push(g);
       // 下方两行：commit #N + hash
       var ly = cy + r + 22;
-      parts.push('<text class="c-commit-num" x="' + cx + '" y="' + ly + '" text-anchor="middle" font-size="13" fill="var(--c-fg)" font-weight="700">commit #' + (c + 1) + '</text>');
-      parts.push('<text class="c-commit-hash" x="' + cx + '" y="' + (ly + 17) + '" text-anchor="middle" font-size="11" fill="var(--c-fg-muted)" font-family="ui-monospace,monospace">' + ids[c] + '</text>');
+      parts.push('<text class="c-commit-num" x="' + cx + '" y="' + ly + '" text-anchor="middle" font-size="13" fill="#d6e0f0" font-weight="700">commit #' + (c + 1) + '</text>');
+      parts.push('<text class="c-commit-hash" x="' + cx + '" y="' + (ly + 17) + '" text-anchor="middle" font-size="11" fill="var(--c-fg-muted)">' + ids[c] + '</text>');
     }
 
     parts.push('</svg>');
@@ -119,8 +129,11 @@
               '你每次说"存一版"，Git 那边就是"做一次 commit"。一根链串起来，就是这篇推文从头到尾的全部历史。' +
             '</div>' +
             '<style>' +
-            '.c-commit-chartwrap{background:var(--c-bg-card);border:1px solid var(--c-border);border-radius:16px;padding:18px 10px;margin:18px 0;}' +
+            '.c-commit-chartwrap{background:rgba(255,255,255,0.04);border:1px solid var(--c-border);border-radius:16px;padding:18px 10px;margin:18px 0;box-shadow:inset 0 0 60px color-mix(in srgb,var(--course-accent) 5%,transparent);}' +
             '.c-commit-chain{display:block;max-width:760px;margin:0 auto;}' +
+            '.c-commit-chain .c-commit-hash,.c-commit-chain .c-commit-num{font-family:var(--font-mono);}' +
+            '.c-commit-node .c-commit-dot{transform-box:fill-box;transform-origin:center;animation:c-commit-pop .5s both cubic-bezier(.34,1.56,.64,1);}' +
+            '@keyframes c-commit-pop{from{opacity:0;transform:scale(.2)}to{opacity:1;transform:scale(1)}}' +
             '</style>';
         }
       },
@@ -139,16 +152,18 @@
               '<span class="c-commit-detail-empty">👆 点上面任意一个 commit 圆点</span>' +
             '</div>' +
             '<style>' +
-            '.c-commit-chartwrap{background:var(--c-bg-card);border:1px solid var(--c-border);border-radius:16px;padding:18px 10px;margin:18px 0 14px;}' +
+            '.c-commit-chartwrap{background:rgba(255,255,255,0.04);border:1px solid var(--c-border);border-radius:16px;padding:18px 10px;margin:18px 0 14px;box-shadow:inset 0 0 60px color-mix(in srgb,var(--course-accent) 5%,transparent);}' +
             '.c-commit-chain{display:block;max-width:760px;margin:0 auto;}' +
-            '.c-commit-node .c-commit-dot{transition:r .2s ease,filter .2s ease;}' +
-            '.c-commit-node.sel .c-commit-dot{r:20;filter:drop-shadow(0 0 12px var(--course-accent));}' +
+            '.c-commit-chain .c-commit-hash,.c-commit-chain .c-commit-num{font-family:var(--font-mono);}' +
+            '.c-commit-node .c-commit-dot{transform-box:fill-box;transform-origin:center;transition:r .2s ease,filter .2s ease,transform .2s ease;}' +
+            '.c-commit-node:hover .c-commit-dot{transform:scale(1.12);filter:drop-shadow(0 0 8px var(--course-accent));}' +
+            '.c-commit-node.sel .c-commit-dot{r:20;filter:drop-shadow(0 0 14px var(--course-accent));}' +
             '.c-commit-node.sel .c-commit-num{fill:var(--course-accent);}' +
-            '.c-commit-detail{min-height:78px;background:var(--c-bg-soft);border:1px solid var(--c-border);border-left:4px solid var(--course-accent);border-radius:10px;padding:14px 18px;display:flex;align-items:center;}' +
+            '.c-commit-detail{min-height:78px;background:rgba(255,255,255,0.04);border:1px solid var(--c-border);border-left:4px solid var(--course-accent);border-radius:10px;padding:14px 18px;display:flex;align-items:center;box-shadow:inset 0 0 40px color-mix(in srgb,var(--course-accent) 6%,transparent);}' +
             '.c-commit-detail-empty{color:var(--c-fg-muted);}' +
             '.c-commit-detail .h{font-weight:700;color:var(--c-fg);}' +
-            '.c-commit-detail code{font-family:ui-monospace,monospace;color:var(--course-accent);}' +
-            '.c-commit-restore{margin-top:8px;display:inline-block;font-size:13px;background:var(--course-accent);color:#08240f;font-weight:700;padding:4px 12px;border-radius:999px;}' +
+            '.c-commit-detail code{font-family:var(--font-mono,ui-monospace,monospace);color:var(--course-accent);}' +
+            '.c-commit-restore{margin-top:8px;display:inline-block;font-size:13px;background:var(--course-accent);color:#08240f;font-weight:700;padding:4px 12px;border-radius:999px;box-shadow:0 0 14px var(--course-accent-soft);}' +
             '</style>';
 
           var detail = stage.querySelector('#c-commit-detail');
@@ -207,12 +222,12 @@
               '出了问题，一眼就能看出是哪次改动、谁动的，再也不用对着一堆 <span class="deck-kbd">_最终版</span> 互相甩锅。' +
             '</div>' +
             '<style>' +
-            '.c-commit-table{margin:18px 0;border:1px solid var(--c-border);border-radius:12px;overflow:hidden;}' +
+            '.c-commit-table{margin:18px 0;border:1px solid var(--c-border);border-radius:12px;overflow:hidden;background:rgba(255,255,255,0.03);}' +
             '.c-commit-row{display:grid;grid-template-columns:1fr 1fr 1.1fr 2.2fr;align-items:center;}' +
-            '.c-commit-cell{padding:11px 14px;font-size:14px;color:var(--c-fg);border-top:1px solid var(--c-border);}' +
-            '.c-commit-row.head .c-commit-cell{border-top:none;background:var(--c-bg-soft);color:var(--c-fg-muted);font-weight:700;font-size:12.5px;}' +
-            '.c-commit-row:not(.head):hover{background:var(--course-accent-soft);}' +
-            '.c-commit-cell.hash code{font-family:ui-monospace,monospace;color:var(--course-accent);}' +
+            '.c-commit-cell{padding:11px 14px;font-size:14px;color:var(--c-fg);border-top:1px solid var(--c-border);transition:background .15s;}' +
+            '.c-commit-row.head .c-commit-cell{border-top:none;background:rgba(255,255,255,0.05);color:var(--c-fg-muted);font-weight:700;font-size:12.5px;font-family:var(--font-mono,ui-monospace,monospace);letter-spacing:0.02em;}' +
+            '.c-commit-row:not(.head):hover{background:var(--course-accent-soft);box-shadow:inset 3px 0 0 var(--course-accent);}' +
+            '.c-commit-cell.hash code{font-family:var(--font-mono,ui-monospace,monospace);color:var(--course-accent);}' +
             '.c-commit-cell.when{color:var(--c-fg-muted);}' +
             '</style>';
         }
@@ -248,9 +263,9 @@
             '.c-commit-chat{max-width:560px;margin:22px auto;display:flex;flex-direction:column;gap:12px;}' +
             '.c-commit-bubble{position:relative;padding:14px 16px 14px;border-radius:14px;font-size:15px;line-height:1.5;text-align:left;}' +
             '.c-commit-bubble-who{font-size:12px;font-weight:700;margin-bottom:5px;opacity:.8;}' +
-            '.c-commit-bubble.you{align-self:flex-end;background:var(--c-bg-soft);border:1px solid var(--c-border);border-bottom-right-radius:4px;max-width:82%;}' +
-            '.c-commit-bubble.ai{align-self:flex-start;background:var(--course-accent-soft);border:1px solid var(--course-accent);border-bottom-left-radius:4px;max-width:88%;}' +
-            '.c-commit-bubble.ai code{font-family:ui-monospace,monospace;color:var(--course-accent);font-weight:700;}' +
+            '.c-commit-bubble.you{align-self:flex-end;background:rgba(255,255,255,0.05);border:1px solid var(--c-border);border-bottom-right-radius:4px;max-width:82%;}' +
+            '.c-commit-bubble.ai{align-self:flex-start;background:var(--course-accent-soft);border:1px solid var(--course-accent);border-bottom-left-radius:4px;max-width:88%;box-shadow:0 0 22px var(--course-accent-soft);}' +
+            '.c-commit-bubble.ai code{font-family:var(--font-mono,ui-monospace,monospace);color:var(--course-accent);font-weight:700;}' +
             '</style>';
         }
       }

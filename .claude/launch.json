@@ -2,10 +2,10 @@
   "version": "0.0.1",
   "configurations": [
     {
-      "name": "tutorial",
-      "runtimeExecutable": "python",
-      "runtimeArgs": ["-m", "http.server", "8765", "--directory", "C:\\Users\\david\\github-tutorial"],
-      "port": 8765
+      "name": "course2-smoke",
+      "runtimeExecutable": "npx",
+      "runtimeArgs": ["--yes", "http-server", "course2", "-p", "8231", "-c-1", "--silent"],
+      "port": 8231
     }
   ]
 }

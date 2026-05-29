@@ -1,0 +1,1121 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Git，但是给 Vibe Coder</title>
+<style>
+/* ============================================================
+   CONFIG / TOKENS
+   ============================================================ */
+:root{
+  --bg:#0D1117; --text:#E6EDF3; --dim:#8B949E; --git:#F05133;
+  --c-main:#E6EDF3; --c-teal:#2DD4BF; --c-purple:#A78BFA; --c-amber:#FBBF24; --c-pink:#F472B6;
+  --info:#58A6FF; --warn:#3B82F6; --ghost:#4B5563;
+
+  --font-sans:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang SC','Microsoft YaHei',sans-serif;
+  --font-mono:'JetBrains Mono',ui-monospace,'SF Mono',Menlo,Consolas,monospace;
+
+  --pane:#161B22; --pane2:#1C2230; --border:#30363D;
+  --ease:cubic-bezier(.22,.61,.36,1);
+}
+
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;width:100%;overflow:hidden}
+body{
+  background:var(--bg); color:var(--text);
+  font-family:var(--font-sans);
+  -webkit-font-smoothing:antialiased; text-rendering:optimizeLegibility;
+  line-height:1.5; position:relative;
+}
+
+/* ============================================================
+   DECORATIVE DRIFTING COMMIT-GRAPH BACKGROUND
+   ============================================================ */
+#bg-deco{position:fixed;inset:0;z-index:0;pointer-events:none;opacity:.5}
+#bg-deco svg{width:100%;height:100%;display:block}
+.deco-drift{animation:drift 60s linear infinite}
+@keyframes drift{from{transform:translateX(0)}to{transform:translateX(-220px)}}
+.deco-dot{fill:var(--text);opacity:.06}
+.deco-line{stroke:var(--text);stroke-width:2;opacity:.045;fill:none}
+
+/* ============================================================
+   STAGE / SCREEN LAYOUT
+   ============================================================ */
+#deck{position:fixed;inset:0;z-index:1;display:flex;align-items:center;justify-content:center}
+.screen{
+  position:absolute;inset:0;
+  display:none; flex-direction:column;align-items:center;justify-content:center;
+  padding:clamp(28px,5vw,80px); padding-bottom:96px;
+  overflow:auto;
+}
+.screen.is-active{display:flex; animation:screenIn .45s var(--ease)}
+@keyframes screenIn{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+.screen-inner{width:100%;max-width:1180px;margin:auto}
+
+/* empty fallback */
+#empty-note{
+  position:fixed;inset:0;z-index:1;display:flex;align-items:center;justify-content:center;
+  flex-direction:column;gap:14px;text-align:center;padding:40px;
+}
+
+/* ============================================================
+   TYPOGRAPHY / COMMON CLASSES
+   ============================================================ */
+.sc-h1{font-size:clamp(34px,5.5vw,68px);font-weight:800;letter-spacing:-.02em;line-height:1.05}
+.sc-h2{font-size:clamp(24px,3.4vw,40px);font-weight:700;letter-spacing:-.01em;line-height:1.15}
+.sc-lead{font-size:clamp(17px,2vw,24px);color:var(--text);font-weight:500;line-height:1.45}
+.sc-p{font-size:clamp(15px,1.5vw,19px);color:var(--text);line-height:1.6}
+.sc-dim{color:var(--dim)}
+.sc-mono{font-family:var(--font-mono);font-feature-settings:"liga" 0}
+.sc-center{text-align:center}
+
+.sc-pill{
+  display:inline-flex;align-items:center;gap:6px;
+  padding:4px 12px;border-radius:999px;
+  font-size:13px;font-weight:600;font-family:var(--font-mono);
+  background:rgba(240,81,51,.12);color:var(--git);
+  border:1px solid rgba(240,81,51,.3);
+}
+.sc-btn{
+  display:inline-flex;align-items:center;gap:8px;
+  padding:10px 20px;border-radius:10px;cursor:pointer;
+  font-family:var(--font-sans);font-size:15px;font-weight:600;
+  background:var(--pane2);color:var(--text);
+  border:1px solid var(--border);
+  transition:transform .15s var(--ease),background .15s,border-color .15s;
+  user-select:none;
+}
+.sc-btn:hover{background:#272e3d;border-color:#454d5e;transform:translateY(-1px)}
+.sc-btn:active{transform:translateY(0)}
+.sc-btn.primary{background:var(--git);border-color:var(--git);color:#fff}
+.sc-btn.primary:hover{filter:brightness(1.08)}
+
+.sc-card{
+  background:var(--pane);border:1px solid var(--border);
+  border-radius:16px;padding:clamp(18px,2.4vw,30px);
+}
+.sc-grid{display:grid;gap:18px}
+
+.sc-warn-banner{
+  display:flex;align-items:center;gap:10px;
+  padding:10px 18px;border-radius:12px;
+  background:rgba(88,166,255,.1);border:1px solid rgba(88,166,255,.4);
+  color:var(--info);font-size:14px;font-weight:600;
+}
+.sc-warn-banner::before{content:"⚠";font-size:18px}
+
+/* ============================================================
+   AI COMMAND CARD
+   ============================================================ */
+.aicard{
+  display:flex;flex-direction:column;gap:14px;
+  background:var(--pane);border:1px solid var(--border);
+  border-radius:18px;padding:22px;max-width:560px;
+}
+.aicard-effect{font-size:clamp(19px,2.4vw,28px);font-weight:800;letter-spacing:-.01em}
+.aicard-effect b{color:var(--c-teal)}
+.aicard-bubble{
+  align-self:flex-start;max-width:100%;
+  background:var(--pane2);border:1px solid var(--border);
+  border-radius:16px 16px 16px 4px;
+  padding:12px 16px;font-size:15px;line-height:1.5;
+}
+.aicard-bubble .say{color:var(--c-purple);font-weight:600}
+.aicard-cmd{display:flex;flex-direction:column;gap:8px}
+.aicard-toggle{
+  display:inline-flex;align-items:center;gap:6px;cursor:pointer;
+  color:var(--dim);font-family:var(--font-mono);font-size:13px;
+  user-select:none;width:fit-content;
+}
+.aicard-toggle .chev{transition:transform .2s var(--ease)}
+.aicard.open .aicard-toggle .chev{transform:rotate(180deg)}
+.aicard-real{
+  font-family:var(--font-mono);font-size:14px;
+  background:#010409;border:1px solid var(--border);border-radius:10px;
+  padding:0 14px;color:var(--c-teal);
+  max-height:0;overflow:hidden;opacity:0;
+  transition:max-height .3s var(--ease),opacity .25s,padding .3s var(--ease);
+  white-space:pre-wrap;word-break:break-word;
+}
+.aicard.open .aicard-real{max-height:240px;opacity:1;padding:12px 14px}
+.aicard-real::before{content:"$ ";color:var(--dim)}
+
+/* ============================================================
+   COMMIT GRAPH
+   ============================================================ */
+.cg-wrap{position:relative;width:100%}
+.cg-svg{width:100%;display:block;overflow:visible}
+.cg-svg.detached{filter:saturate(.35) brightness(.9)}
+.cg-edge{fill:none;stroke:var(--border);stroke-width:3;
+  transition:stroke .4s var(--ease),opacity .4s var(--ease)}
+.cg-edge.merge{stroke-dasharray:none}
+.cg-node{cursor:default}
+.cg-node circle{
+  stroke:#010409;stroke-width:2;
+  transition:r .35s var(--ease),fill .4s var(--ease),opacity .4s var(--ease),filter .4s;
+}
+.cg-node.appear{animation:nodePop .45s var(--ease)}
+@keyframes nodePop{0%{transform:scale(0);opacity:0}60%{transform:scale(1.25)}100%{transform:scale(1);opacity:1}}
+.cg-node .glow{filter:drop-shadow(0 0 6px rgba(255,255,255,.25))}
+.cg-node.ghost circle{fill:var(--ghost)!important;opacity:.45;stroke-dasharray:3 3}
+.cg-node.ghost text{opacity:.5}
+.cg-node.hl circle{stroke:var(--git);stroke-width:3.5;filter:drop-shadow(0 0 9px rgba(240,81,51,.85))}
+.cg-node .label{font-family:var(--font-mono);font-size:12px;fill:var(--bg);font-weight:700;text-anchor:middle;dominant-baseline:central;pointer-events:none}
+.cg-node.dark-label .label{fill:var(--bg)}
+.cg-node.light-label .label{fill:#010409}
+
+.cg-pill{
+  font-family:var(--font-mono);font-size:12px;font-weight:700;
+}
+.cg-pill rect{transition:all .35s var(--ease)}
+.cg-pill text{dominant-baseline:central;text-anchor:middle}
+
+.cg-head{transition:transform .4s var(--ease),opacity .4s}
+.cg-head rect{fill:var(--git);rx:4}
+.cg-head text{fill:#fff;font-family:var(--font-mono);font-size:11px;font-weight:800;text-anchor:middle;dominant-baseline:central}
+.cg-head .stem{stroke:var(--git);stroke-width:2.5}
+.cg-head.detached rect{fill:var(--warn)}
+.cg-head.detached .stem{stroke:var(--warn);stroke-dasharray:3 3}
+
+.cg-detach-banner{
+  position:absolute;top:-4px;left:50%;transform:translateX(-50%) translateY(-100%);
+  white-space:nowrap;
+  padding:6px 14px;border-radius:0 0 10px 10px;
+  background:rgba(59,130,246,.18);border:1px solid rgba(88,166,255,.5);
+  color:var(--info);font-size:12.5px;font-weight:700;font-family:var(--font-mono);
+  opacity:0;transition:opacity .35s var(--ease),transform .35s var(--ease);
+}
+.cg-detach-banner.show{opacity:1;transform:translateX(-50%) translateY(0)}
+
+/* ============================================================
+   ASTRONAUT
+   ============================================================ */
+.astronaut{
+  position:fixed;z-index:60;font-size:38px;pointer-events:none;
+  filter:drop-shadow(0 4px 12px rgba(0,0,0,.5));
+  will-change:transform,opacity;
+}
+@keyframes astroFloat{
+  0%{opacity:0;transform:translate(-50%,-50%) scale(.4) rotate(0deg)}
+  15%{opacity:1;transform:translate(-50%,-50%) scale(1.1) rotate(-8deg)}
+  100%{opacity:0;transform:translate(calc(-50% + var(--ax,260px)),calc(-50% - var(--ay,320px))) scale(.7) rotate(40deg)}
+}
+.astronaut.go{animation:astroFloat 2.8s var(--ease) forwards}
+
+/* ============================================================
+   FRAGMENTS (step reveal)
+   ============================================================ */
+.frag-hidden{opacity:0;transform:translateY(10px);transition:opacity .4s var(--ease),transform .4s var(--ease)}
+.frag-show{opacity:1;transform:none}
+
+/* ============================================================
+   NAVIGATION / CHROME
+   ============================================================ */
+#progress{position:fixed;left:0;bottom:0;height:3px;background:var(--git);z-index:40;
+  width:0;transition:width .4s var(--ease);box-shadow:0 0 10px rgba(240,81,51,.6)}
+#footer{
+  position:fixed;left:0;right:0;bottom:0;height:46px;z-index:30;
+  display:flex;align-items:center;gap:14px;
+  padding:0 18px;font-size:13px;color:var(--dim);
+  background:linear-gradient(to top,rgba(13,17,23,.92),rgba(13,17,23,0));
+  pointer-events:none;
+}
+#footer .chap{font-weight:600;color:var(--text)}
+#footer .spacer{flex:1}
+#footer .keys{font-family:var(--font-mono);font-size:11px;opacity:.7}
+
+#menu-btn{
+  position:fixed;top:16px;left:16px;z-index:50;
+  width:42px;height:42px;border-radius:11px;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;
+  background:var(--pane);border:1px solid var(--border);color:var(--text);
+  transition:background .15s,transform .15s;
+}
+#menu-btn:hover{background:var(--pane2);transform:translateY(-1px)}
+#menu-btn svg{width:20px;height:20px}
+
+#topright{position:fixed;top:16px;right:16px;z-index:50;display:flex;gap:8px}
+.icon-btn{
+  width:42px;height:42px;border-radius:11px;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;
+  background:var(--pane);border:1px solid var(--border);color:var(--dim);
+  font-size:12px;font-weight:700;font-family:var(--font-mono);
+  transition:background .15s,color .15s,transform .15s;
+}
+.icon-btn:hover{background:var(--pane2);color:var(--text);transform:translateY(-1px)}
+
+/* OVERVIEW */
+#overview{
+  position:fixed;inset:0;z-index:80;display:none;
+  background:rgba(13,17,23,.97);backdrop-filter:blur(8px);
+  overflow:auto;padding:clamp(40px,7vh,90px) clamp(24px,6vw,90px);
+}
+#overview.open{display:block;animation:screenIn .3s var(--ease)}
+#overview h2{font-size:28px;font-weight:800;margin-bottom:6px}
+#overview .ov-sub{color:var(--dim);margin-bottom:34px;font-size:14px}
+.ov-chapter{margin-bottom:30px}
+.ov-chapter-h{
+  display:flex;align-items:baseline;gap:10px;margin-bottom:12px;
+  border-bottom:1px solid var(--border);padding-bottom:8px;
+}
+.ov-chapter-h .num{
+  font-family:var(--font-mono);font-size:13px;font-weight:800;color:var(--git);
+  background:rgba(240,81,51,.12);border-radius:6px;padding:2px 8px;
+}
+.ov-chapter-h .nm{font-size:18px;font-weight:700}
+.ov-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:10px}
+.ov-item{
+  text-align:left;cursor:pointer;border-radius:12px;padding:14px 16px;
+  background:var(--pane);border:1px solid var(--border);
+  transition:background .15s,border-color .15s,transform .15s;
+}
+.ov-item:hover{background:var(--pane2);border-color:#454d5e;transform:translateY(-2px)}
+.ov-item.current{border-color:var(--git);box-shadow:0 0 0 1px var(--git) inset}
+.ov-item .t{font-weight:700;font-size:15px;margin-bottom:3px}
+.ov-item .s{color:var(--dim);font-size:12.5px}
+.ov-item .idx{font-family:var(--font-mono);font-size:11px;color:var(--dim);float:right}
+#ov-close{position:absolute;top:22px;right:26px;}
+
+::-webkit-scrollbar{width:10px;height:10px}
+::-webkit-scrollbar-thumb{background:#30363d;border-radius:8px}
+::-webkit-scrollbar-track{background:transparent}
+</style>
+</head>
+<body>
+
+<!-- decorative drifting commit graph -->
+<div id="bg-deco" aria-hidden="true">
+  <svg viewBox="0 0 1200 800" preserveAspectRatio="xMidYMid slice">
+    <g class="deco-drift" id="deco-g"></g>
+  </svg>
+</div>
+
+<!-- empty fallback -->
+<div id="empty-note">
+  <div class="sc-pill">git, but for vibe coders</div>
+  <div class="sc-h2">还没有任何幻灯片</div>
+  <div class="sc-dim">章节脚本会通过 <span class="sc-mono">registerScreen()</span> 注入到这里。</div>
+</div>
+
+<!-- deck root -->
+<div id="deck" aria-live="polite"></div>
+
+<!-- chrome -->
+<div id="progress"></div>
+<div id="footer">
+  <span class="chap" id="foot-chap"></span>
+  <span id="foot-title" class="sc-dim"></span>
+  <span class="spacer"></span>
+  <span class="keys">空格/→ 下一步 · ← 上一步 · ESC 总览 · F 全屏 · R 重置</span>
+</div>
+
+<button id="menu-btn" title="章节总览 (ESC)" aria-label="章节总览">
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+    <line x1="4" y1="7" x2="20" y2="7"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="17" x2="20" y2="17"/>
+  </svg>
+</button>
+<div id="topright">
+  <button class="icon-btn" id="btn-prev" title="上一步 (←)">‹</button>
+  <button class="icon-btn" id="btn-reset" title="重置本屏 (R)">R</button>
+  <button class="icon-btn" id="btn-full" title="全屏 (F)">⤢</button>
+  <button class="icon-btn" id="btn-next" title="下一步 (空格/→)">›</button>
+</div>
+
+<!-- overview -->
+<div id="overview">
+  <button class="sc-btn" id="ov-close">关闭 ✕</button>
+  <h2>章节总览</h2>
+  <div class="ov-sub">点任意条目跳转 · 按 chapter 分组</div>
+  <div id="ov-body"></div>
+</div>
+
+<!-- ===== EARLY REGISTRATION SHIM =====
+     Defined BEFORE chapter modules so chapters can call registerScreen()
+     even though the engine loads after them. Chapters get queued in
+     window.__pendingScreens; the engine drains the queue on boot and then
+     swaps in its own (identical-signature) registerScreen for late adds. -->
+<script>
+(function(){
+  if(!window.__pendingScreens) window.__pendingScreens=[];
+  if(typeof window.registerScreen!=='function'){
+    window.registerScreen=function(def){ window.__pendingScreens.push(def); };
+  }
+})();
+</script>
+
+<!-- ===== SCREEN MODULES (chapters injected at integration) ===== -->
+<!-- @@SCREENS@@ -->
+
+<!-- ===== ENGINE ===== -->
+<script>
+(function(){
+"use strict";
+
+/* ------------------------------------------------------------
+   SCREEN REGISTRATION  (chapters may register BEFORE engine)
+   ------------------------------------------------------------ */
+var SCREENS = [];
+// consume any screens registered before this engine ran
+if (window.__pendingScreens && window.__pendingScreens.length){
+  SCREENS = SCREENS.concat(window.__pendingScreens);
+}
+window.registerScreen = function(def){ SCREENS.push(def); };
+// if a future module registers after engine load but before boot, still captured.
+
+/* ------------------------------------------------------------
+   SVG HELPERS
+   ------------------------------------------------------------ */
+var SVGNS = "http://www.w3.org/2000/svg";
+function svgEl(name, attrs){
+  var e = document.createElementNS(SVGNS, name);
+  if (attrs) for (var k in attrs) e.setAttribute(k, attrs[k]);
+  return e;
+}
+function el(tag, cls, txt){
+  var e = document.createElement(tag);
+  if (cls) e.className = cls;
+  if (txt != null) e.textContent = txt;
+  return e;
+}
+
+var BRANCH_COLORS = {
+  main:'#E6EDF3', teal:'#2DD4BF', purple:'#A78BFA', amber:'#FBBF24', pink:'#F472B6'
+};
+// dark dot colors that need a light text label
+function needsDarkLabel(hex){
+  // returns true if label text should be dark (because dot is light)
+  if(!hex) return false;
+  var c = hex.replace('#',''); if(c.length===3) c=c.replace(/(.)/g,'$1$1');
+  var r=parseInt(c.substr(0,2),16),g=parseInt(c.substr(2,2),16),b=parseInt(c.substr(4,2),16);
+  var lum=(0.299*r+0.587*g+0.114*b);
+  return lum>150; // light dot -> dark label
+}
+
+/* ============================================================
+   COMMIT GRAPH
+   ============================================================ */
+function CommitGraph(container, opts){
+  this.opts = opts || {};
+  this.container = container;
+  this.wrap = el('div','cg-wrap');
+  container.appendChild(this.wrap);
+
+  this.svg = svgEl('svg',{'class':'cg-svg', 'viewBox':'0 0 100 100', 'preserveAspectRatio':'xMidYMid meet'});
+  this.gEdges = svgEl('g',{'class':'cg-edges'});
+  this.gNodes = svgEl('g',{'class':'cg-nodes'});
+  this.gLabels = svgEl('g',{'class':'cg-labels'});
+  this.gHead = svgEl('g',{'class':'cg-headlayer'});
+  this.svg.appendChild(this.gEdges);
+  this.svg.appendChild(this.gNodes);
+  this.svg.appendChild(this.gLabels);
+  this.svg.appendChild(this.gHead);
+  this.wrap.appendChild(this.svg);
+
+  this.banner = el('div','cg-detach-banner','⚠ HEAD 处于分离态 (detached HEAD) — 此处的提交无分支收留');
+  this.wrap.appendChild(this.banner);
+
+  this._reset();
+}
+
+CommitGraph.prototype._reset = function(){
+  this.commits = {};     // id -> {id, branchLane, x, y, parents:[], color, ghost, node}
+  this.branches = {};    // name -> {name, color, lane, head:commitId}
+  this.order = [];       // commit ids in creation order
+  this.laneCount = 0;
+  this.head = {type:'branch', ref:null}; // {type:'branch'|'commit', ref}
+  this.detached = false;
+  this.gEdges.innerHTML='';
+  this.gNodes.innerHTML='';
+  this.gLabels.innerHTML='';
+  this.gHead.innerHTML='';
+  this.banner.classList.remove('show');
+  this.svg.classList.remove('detached');
+};
+
+CommitGraph.prototype.reset = function(){ this._reset(); };
+
+/* layout geometry */
+CommitGraph.prototype._colX = function(index){ return 70 + index*92; };
+CommitGraph.prototype._laneY = function(lane){ return 90 + lane*120; };
+
+CommitGraph.prototype._animate = function(want){
+  // returns whether to animate this change
+  if (this._suppressAnim) return false;
+  return want !== false;
+};
+
+/* ---- public: init a branch with N commits in a row ---- */
+CommitGraph.prototype.init = function(branchName, ids){
+  var color = BRANCH_COLORS[branchName] || BRANCH_COLORS.main;
+  var lane = this.laneCount++;
+  this.branches[branchName] = {name:branchName, color:color, lane:lane, head:null};
+  this.head = {type:'branch', ref:branchName};
+  var self=this;
+  ids.forEach(function(id, i){
+    self._createCommit(id, branchName, (i===0?[]:[ids[i-1]]), {anim:false});
+  });
+  this._render(false);
+  return this;
+};
+
+CommitGraph.prototype._createCommit = function(id, branchName, parents, o){
+  o = o||{};
+  var b = this.branches[branchName];
+  // commit index = number of commits already on this lane (chain length on lane)
+  var laneCommits = this.order.filter(function(cid){return this.commits[cid].lane===b.lane;}, this);
+  var commit = {
+    id:id, branch:branchName, lane:b.lane, color:b.color,
+    parents:parents||[], ghost:false,
+    index: laneCommits.length // position along the lane
+  };
+  this.commits[id]=commit;
+  this.order.push(id);
+  b.head = id;
+  return commit;
+};
+
+/* ---- public: addCommit on branch tip ---- */
+CommitGraph.prototype.addCommit = function(branchName, id, o){
+  o=o||{};
+  var b=this.branches[branchName];
+  if(!b) return this;
+  var parent = b.head;
+  var c = this._createCommit(id, branchName, parent?[parent]:[], o);
+  c._new = true;
+  // if HEAD attached to this branch, head follows
+  if (this.head.type==='branch' && this.head.ref===branchName){ /* head ref already on branch */ }
+  this._render(this._animate(o.anim));
+  return this;
+};
+
+/* ---- public: create branch off a commit ---- */
+CommitGraph.prototype.createBranch = function(name, fromCommit, color){
+  color = color || BRANCH_COLORS[name] || '#'+Math.floor(Math.random()*0xffffff).toString(16);
+  var lane = this.laneCount++;
+  this.branches[name] = {name:name, color:color, lane:lane, head:fromCommit, base:fromCommit};
+  this._render(true);
+  return this;
+};
+
+/* ---- public: checkout branch OR commit ---- */
+CommitGraph.prototype.checkout = function(ref){
+  if (this.branches[ref]){
+    this.head = {type:'branch', ref:ref};
+    this.detached = false;
+  } else if (this.commits[ref]){
+    this.head = {type:'commit', ref:ref};
+    this.detached = true;
+  }
+  this._render(true);
+  return this;
+};
+
+/* ---- public: merge srcBranch into dstBranch ---- */
+CommitGraph.prototype.merge = function(srcBranch, dstBranch){
+  var src=this.branches[srcBranch], dst=this.branches[dstBranch];
+  if(!src||!dst) return this;
+  var mergeId = (dst.head||'') + '+' + (src.head||'');
+  // create merge commit on dst lane with two parents
+  var c=this._createCommit('M'+(this.order.length), dstBranch, [dst.head, src.head], {});
+  c.isMerge=true; c._new=true; c.label='⛙';
+  this._render(true);
+  return this;
+};
+
+/* ---- public: commit while detached -> orphan + astronaut ---- */
+CommitGraph.prototype.commitDetached = function(id){
+  var parent = this.head.ref; // a commit id
+  // orphan lane: put on a fresh lane just below
+  var lane=this.laneCount++;
+  var c={ id:id, branch:null, lane:lane, color:BRANCH_COLORS.main,
+          parents:parent?[parent]:[], ghost:true, index: (this.commits[parent]?this.commits[parent].index+1:0),
+          orphan:true, _new:true };
+  this.commits[id]=c; this.order.push(id);
+  // head now points to this new commit (still detached)
+  this.head={type:'commit', ref:id};
+  this.detached=true;
+  this._render(true);
+  // astronaut floats away from this node
+  var self=this;
+  setTimeout(function(){
+    var xy=self.getNodeXY(id);
+    if(xy && self._api && self._api.astronaut){
+      self._api.astronaut({svgRoot:self.svg, x:xy.x, y:xy.y});
+    }
+  }, 120);
+  return this;
+};
+
+/* ---- public: mark / unmark ghost ---- */
+CommitGraph.prototype.setGhost = function(id, on){
+  var c=this.commits[id]; if(!c) return this;
+  c.ghost = (on!==false);
+  this._render(true);
+  return this;
+};
+
+/* ---- public: rescue an orphan by giving it a branch ---- */
+CommitGraph.prototype.rescue = function(id, branchName, color){
+  var c=this.commits[id]; if(!c) return this;
+  color = color || BRANCH_COLORS[branchName] || BRANCH_COLORS.amber;
+  c.ghost=false; c.orphan=false; c.branch=branchName; c.color=color;
+  // create a branch record pointing at this commit, reusing its lane
+  this.branches[branchName]={name:branchName,color:color,lane:c.lane,head:id};
+  // if head is this commit, attach head to the new branch
+  if(this.head.type==='commit' && this.head.ref===id){
+    this.head={type:'branch', ref:branchName};
+    this.detached=false;
+  }
+  this._render(true);
+  return this;
+};
+
+/* ---- public: highlight ---- */
+CommitGraph.prototype.highlight = function(id, on){
+  var c=this.commits[id]; if(!c) return this;
+  c.hl=(on!==false);
+  this._render(true);
+  return this;
+};
+
+/* ---- public: node coordinates in PAGE space ---- */
+CommitGraph.prototype.getNodeXY = function(id){
+  var c=this.commits[id]; if(!c) return null;
+  // svg user coords
+  var ux=this._colX(c.index), uy=this._laneY(c.lane);
+  // map to page via current CTM
+  var pt=this.svg.createSVGPoint(); pt.x=ux; pt.y=uy;
+  var ctm=this.svg.getScreenCTM();
+  if(!ctm) return {x:ux,y:uy};
+  var sp=pt.matrixTransform(ctm);
+  return {x:sp.x, y:sp.y};
+};
+
+/* ---- internal render ---- */
+CommitGraph.prototype._render = function(animate){
+  var self=this;
+  // compute viewBox bounds
+  var maxIdx=0, maxLane=0;
+  this.order.forEach(function(cid){var c=self.commits[cid];
+    if(c.index>maxIdx)maxIdx=c.index; if(c.lane>maxLane)maxLane=c.lane;});
+  Object.keys(this.branches).forEach(function(bn){var b=self.branches[bn];if(b.lane>maxLane)maxLane=b.lane;});
+  var W=this._colX(maxIdx)+160; // room for pills
+  var H=this._laneY(maxLane)+90;
+  this.svg.setAttribute('viewBox','0 0 '+Math.max(W,300)+' '+Math.max(H,200));
+
+  // detached visuals
+  if(this.detached){ this.svg.classList.add('detached'); this.banner.classList.add('show'); }
+  else { this.svg.classList.remove('detached'); this.banner.classList.remove('show'); }
+
+  // ---- EDGES ----
+  this.gEdges.innerHTML='';
+  this.order.forEach(function(cid){
+    var c=self.commits[cid];
+    c.parents.forEach(function(pid){
+      var p=self.commits[pid]; if(!p) return;
+      var x1=self._colX(p.index), y1=self._laneY(p.lane);
+      var x2=self._colX(c.index), y2=self._laneY(c.lane);
+      var path;
+      if(p.lane===c.lane){
+        path='M'+x1+','+y1+' L'+x2+','+y2;
+      } else {
+        // curved branch / merge connector
+        var mx=(x1+x2)/2;
+        path='M'+x1+','+y1+' C'+mx+','+y1+' '+mx+','+y2+' '+x2+','+y2;
+      }
+      var e=svgEl('path',{'class':'cg-edge'+(c.isMerge?' merge':''),'d':path});
+      if(c.ghost||p.ghost) e.style.opacity='.4';
+      self.gEdges.appendChild(e);
+    });
+  });
+
+  // ---- NODES ----
+  this.gNodes.innerHTML='';
+  this.order.forEach(function(cid){
+    var c=self.commits[cid];
+    var x=self._colX(c.index), y=self._laneY(c.lane);
+    var g=svgEl('g',{'class':'cg-node'});
+    g.setAttribute('transform','translate('+x+','+y+')');
+    if(c.ghost) g.classList.add('ghost');
+    if(c.hl) g.classList.add('hl');
+    var fill = c.ghost ? '#4B5563' : c.color;
+    g.classList.add(needsDarkLabel(fill)?'dark-label':'light-label');
+    var circ=svgEl('circle',{'class':'glow','r':17,'cx':0,'cy':0,'fill':fill});
+    g.appendChild(circ);
+    var label = c.label || cid;
+    var t=svgEl('text',{'class':'label'}); t.textContent=label.length>3?label.substr(0,3):label;
+    g.appendChild(t);
+    if(c._new && animate){ g.classList.add('appear'); c._new=false; }
+    else { c._new=false; }
+    c._gx=x; c._gy=y;
+    self.gNodes.appendChild(g);
+  });
+
+  // ---- BRANCH PILLS ----
+  this.gLabels.innerHTML='';
+  Object.keys(this.branches).forEach(function(bn){
+    var b=self.branches[bn];
+    var hc=self.commits[b.head];
+    if(!hc) {
+      // empty branch sitting on its base
+      hc=self.commits[b.base];
+    }
+    if(!hc) return;
+    var x=self._colX(hc.index)+30, y=self._laneY(hc.lane)-30;
+    var g=svgEl('g',{'class':'cg-pill'});
+    var w=bn.length*8+18;
+    var rect=svgEl('rect',{'x':x,'y':y-12,'width':w,'height':22,'rx':7,
+      'fill':'rgba(13,17,23,.85)','stroke':b.color,'stroke-width':1.6});
+    var txt=svgEl('text',{'x':x+w/2,'y':y,'fill':b.color}); txt.textContent=bn;
+    g.appendChild(rect); g.appendChild(txt);
+    self.gLabels.appendChild(g);
+  });
+
+  // ---- HEAD FLAG ----
+  this.gHead.innerHTML='';
+  var headCommit=null;
+  if(this.head.type==='branch'){
+    var b=this.branches[this.head.ref];
+    if(b) headCommit=this.commits[b.head]||this.commits[b.base];
+  } else if(this.head.type==='commit'){
+    headCommit=this.commits[this.head.ref];
+  }
+  if(headCommit){
+    var hx=this._colX(headCommit.index), hy=this._laneY(headCommit.lane);
+    var fg=svgEl('g',{'class':'cg-head'+(this.detached?' detached':'')});
+    // stem from node up to flag
+    var flagY=hy-58;
+    var stem=svgEl('line',{'class':'stem','x1':hx,'y1':hy-17,'x2':hx,'y2':flagY+18});
+    fg.appendChild(stem);
+    var fw=46;
+    var rect=svgEl('rect',{'x':hx-fw/2,'y':flagY,'width':fw,'height':20,'rx':4});
+    var txt=svgEl('text',{'x':hx,'y':flagY+10}); txt.textContent='HEAD';
+    fg.appendChild(rect); fg.appendChild(txt);
+    this.gHead.appendChild(fg);
+  }
+};
+
+/* ============================================================
+   AI COMMAND CARD
+   ============================================================ */
+function buildAICard(o){
+  o=o||{};
+  var card=el('div','aicard');
+  card.setAttribute('data-interactive','1');
+  var eff=el('div','aicard-effect');
+  eff.innerHTML='效果：<b></b>';
+  eff.querySelector('b').textContent=o.effect||'';
+  card.appendChild(eff);
+
+  var bub=el('div','aicard-bubble');
+  bub.innerHTML='🤖 你对 AI 说：『<span class="say"></span>』';
+  bub.querySelector('.say').textContent=o.say||'';
+  card.appendChild(bub);
+
+  var cmdWrap=el('div','aicard-cmd');
+  var toggle=el('div','aicard-toggle');
+  toggle.innerHTML='幕后真命令（点击展开）<span class="chev">▾</span>';
+  var real=el('div','aicard-real'); real.textContent=o.cmd||'';
+  cmdWrap.appendChild(toggle); cmdWrap.appendChild(real);
+  card.appendChild(cmdWrap);
+
+  toggle.addEventListener('click', function(e){
+    e.stopPropagation();
+    card.classList.toggle('open');
+  });
+  return card;
+}
+
+/* ============================================================
+   ASTRONAUT
+   ============================================================ */
+function launchAstronaut(o){
+  o=o||{};
+  var a=el('div','astronaut','👨‍🚀');
+  var x=o.x!=null?o.x:window.innerWidth/2;
+  var y=o.y!=null?o.y:window.innerHeight/2;
+  a.style.left=x+'px'; a.style.top=y+'px';
+  // random-ish drift up & away
+  a.style.setProperty('--ax', (180+Math.random()*160)+'px');
+  a.style.setProperty('--ay', (260+Math.random()*120)+'px');
+  document.body.appendChild(a);
+  // force reflow then animate
+  void a.offsetWidth;
+  a.classList.add('go');
+  setTimeout(function(){ if(a.parentNode) a.parentNode.removeChild(a); }, 3000);
+}
+
+/* ============================================================
+   STEP CONTROLLER  (per-screen)
+   ============================================================ */
+function StepController(){
+  this.steps=[];        // array of {fn}
+  this.resetCbs=[];
+}
+StepController.prototype.add=function(fn){ this.steps.push(fn); };
+StepController.prototype.count=function(){ return this.steps.length; };
+/* play steps up to targetStep (1-indexed count of executed steps).
+   animated=false for replay. */
+StepController.prototype.runTo=function(target, animated){
+  for(var i=0;i<target && i<this.steps.length;i++){
+    try{ this.steps[i](animated); }catch(err){ console.error('step error',err); }
+  }
+};
+
+/* ============================================================
+   DECK ENGINE
+   ============================================================ */
+var Deck = {
+  screens:[],     // resolved & sorted screen defs
+  idx:0,          // current screen index
+  step:0,         // current step within screen (0 = initial)
+  els:[],         // screen root divs
+  ctrl:null,      // current StepController
+  api:null,
+
+  boot:function(){
+    var deck=document.getElementById('deck');
+    var note=document.getElementById('empty-note');
+
+    // sort: by chapter asc, stable within chapter (registration order preserved by stable sort)
+    this.screens = SCREENS.slice();
+    this.screens.forEach(function(s,i){ s.__reg=i; });
+    this.screens.sort(function(a,b){
+      var ca=a.chapter||0, cb=b.chapter||0;
+      if(ca!==cb) return ca-cb;
+      return a.__reg-b.__reg;
+    });
+
+    if(!this.screens.length){
+      note.style.display='flex';
+      return;
+    }
+    note.style.display='none';
+
+    // create a root div per screen
+    var self=this;
+    this.screens.forEach(function(s,i){
+      var sc=el('div','screen');
+      sc.setAttribute('data-screen-idx',i);
+      var inner=el('div','screen-inner');
+      sc.appendChild(inner);
+      sc._inner=inner;
+      deck.appendChild(sc);
+      self.els.push(sc);
+    });
+
+    this.buildOverview();
+    this.bindEvents();
+
+    // route from hash if present (#s<idx> or #s<idx>.<step>)
+    var routed=this.parseHash();
+    this.go(routed.idx||0, routed.step||0, false);
+  },
+
+  parseHash:function(){
+    var m=/^#s(\d+)(?:\.(\d+))?$/.exec(location.hash||'');
+    if(m) return {idx:Math.min(+m[1], this.screens.length-1), step:+(m[2]||0)};
+    return {idx:0, step:0};
+  },
+  writeHash:function(){
+    var h='#s'+this.idx+(this.step?('.'+this.step):'');
+    if(location.hash!==h) history.replaceState(null,'',h);
+  },
+
+  /* build api object given current screen root + controller */
+  makeApi:function(ctrl, isReplay){
+    var self=this;
+    return {
+      isReplay:isReplay,
+      step:function(fn){ ctrl.add(fn); },
+      frag:function(elm){
+        elm.classList.add('frag-hidden');
+        ctrl.add(function(animated){
+          // show
+          elm.classList.remove('frag-hidden');
+          elm.classList.add('frag-show');
+          if(!animated){
+            // jump without transition for replay
+            var prev=elm.style.transition; elm.style.transition='none';
+            void elm.offsetWidth; elm.style.transition=prev;
+          }
+        });
+        return elm;
+      },
+      graph:function(container, opts){
+        var g=new CommitGraph(container, opts);
+        g._api=self.api; // give graph access to astronaut etc (set after api built)
+        return g;
+      },
+      aiCard:function(o){ return buildAICard(o); },
+      astronaut:function(o){ launchAstronaut(o); },
+      next:function(){ self.next(); },
+      prev:function(){ self.prev(); },
+      onReset:function(fn){ ctrl.resetCbs.push(fn); }
+    };
+  },
+
+  /* render screen idx fresh, then replay to step */
+  renderScreen:function(idx, targetStep, animated){
+    var def=this.screens[idx];
+    var sc=this.els[idx];
+    sc._inner.innerHTML='';        // fresh
+    var ctrl=new StepController();
+    this.ctrl=ctrl;
+
+    // isReplay = true whenever the screen is being (re)built non-animated
+    // (back-step, prev-screen-at-last-step, resize, hash route). Render code
+    // can use it to skip one-time entrance animations.
+    var api=this.makeApi(ctrl, animated===false);
+    this.api=api;
+
+    try{
+      def.render(sc._inner, api);
+    }catch(err){ console.error('render error in screen',idx,err); }
+
+    // clamp target
+    var max=ctrl.count();
+    if(targetStep>max) targetStep=max;
+    if(targetStep<0) targetStep=0;
+    this.step=targetStep;
+
+    // replay steps to target without animation (initial DOM already at step 0)
+    if(targetStep>0) ctrl.runTo(targetStep, false);
+
+    return ctrl;
+  },
+
+  go:function(idx, step, animated){
+    if(idx<0) idx=0;
+    if(idx>this.screens.length-1) idx=this.screens.length-1;
+    // hide all, show target
+    this.els.forEach(function(e){ e.classList.remove('is-active'); });
+    this.idx=idx;
+    var sc=this.els[idx];
+    sc.classList.add('is-active');
+    this.renderScreen(idx, step||0, animated===false?false:false);
+    // note: entering a screen always replays via animated=false for the step playback,
+    // but the screen transition itself uses CSS. Live step advances use animated=true.
+    this.updateChrome();
+    this.writeHash();
+    this.markOverviewCurrent();
+  },
+
+  next:function(){
+    // advance step within screen first
+    if(this.ctrl && this.step < this.ctrl.count()){
+      this.step++;
+      // run only the newly-revealed step WITH animation
+      try{ this.ctrl.steps[this.step-1](true); }catch(e){ console.error(e); }
+      this.updateChrome();
+      this.writeHash();
+      return;
+    }
+    // else go to next screen
+    if(this.idx < this.screens.length-1){
+      this.go(this.idx+1, 0, true);
+    }
+  },
+
+  prev:function(){
+    if(this.step>0){
+      // step back: re-render screen at step-1 (replay, no anim)
+      this.step--;
+      this.renderScreen(this.idx, this.step, false);
+      this.updateChrome();
+      this.writeHash();
+      return;
+    }
+    if(this.idx>0){
+      // go to previous screen at its LAST step
+      var prevIdx=this.idx-1;
+      // render fresh to learn step count
+      this.els.forEach(function(e){ e.classList.remove('is-active'); });
+      this.idx=prevIdx;
+      var sc=this.els[prevIdx];
+      sc.classList.add('is-active');
+      var ctrl=this.renderScreen(prevIdx, 0, false);
+      var last=ctrl.count();
+      this.step=last;
+      if(last>0) ctrl.runTo(last, false);
+      this.updateChrome();
+      this.writeHash();
+      this.markOverviewCurrent();
+    }
+  },
+
+  resetScreen:function(){
+    if(this.ctrl){
+      this.ctrl.resetCbs.forEach(function(fn){ try{fn();}catch(e){console.error(e);} });
+    }
+    this.go(this.idx, 0, true);
+  },
+
+  updateChrome:function(){
+    var def=this.screens[this.idx];
+    // progress = overall position across screens & steps
+    var total=0, done=0, self=this;
+    // approximate: count each screen as 1 + its known step count? We only know current ctrl.
+    // Use screens as primary unit plus intra-screen fraction.
+    var n=this.screens.length;
+    var intra = this.ctrl && this.ctrl.count()>0 ? (this.step/this.ctrl.count()) : 0;
+    var frac = (this.idx + intra) / n;
+    document.getElementById('progress').style.width=(frac*100).toFixed(2)+'%';
+
+    document.getElementById('foot-chap').textContent='第 '+(def.chapter||0)+' 章 · '+(def.chapterName||'');
+    var ft=document.getElementById('foot-title');
+    ft.textContent = def.title ? ('— '+def.title) : '';
+  },
+
+  /* ---- overview ---- */
+  buildOverview:function(){
+    var body=document.getElementById('ov-body');
+    body.innerHTML='';
+    // group by chapter
+    var groups=[]; var byCh={};
+    var self=this;
+    this.screens.forEach(function(s,i){
+      var ch=s.chapter||0;
+      if(!byCh[ch]){ byCh[ch]={chapter:ch, name:s.chapterName||'', items:[]}; groups.push(byCh[ch]); }
+      byCh[ch].items.push({def:s, idx:i});
+    });
+    groups.sort(function(a,b){return a.chapter-b.chapter;});
+    groups.forEach(function(grp){
+      var gEl=el('div','ov-chapter');
+      var h=el('div','ov-chapter-h');
+      h.appendChild(el('span','num','第 '+grp.chapter+' 章'));
+      h.appendChild(el('span','nm',grp.name));
+      gEl.appendChild(h);
+      var list=el('div','ov-list');
+      grp.items.forEach(function(it){
+        var item=el('button','ov-item');
+        item.setAttribute('data-goto',it.idx);
+        var idxBadge=el('span','idx','#'+(it.idx+1));
+        item.appendChild(idxBadge);
+        item.appendChild(el('div','t',it.def.title||it.def.id||('屏 '+(it.idx+1))));
+        if(it.def.subtitle) item.appendChild(el('div','s',it.def.subtitle));
+        item.addEventListener('click',function(){
+          self.closeOverview();
+          self.go(it.idx,0,true);
+        });
+        list.appendChild(item);
+      });
+      gEl.appendChild(list);
+      body.appendChild(gEl);
+    });
+  },
+  markOverviewCurrent:function(){
+    var items=document.querySelectorAll('.ov-item');
+    var self=this;
+    items.forEach(function(it){
+      it.classList.toggle('current', +it.getAttribute('data-goto')===self.idx);
+    });
+  },
+  openOverview:function(){ document.getElementById('overview').classList.add('open'); this.markOverviewCurrent(); },
+  closeOverview:function(){ document.getElementById('overview').classList.remove('open'); },
+  toggleOverview:function(){
+    var ov=document.getElementById('overview');
+    if(ov.classList.contains('open')) this.closeOverview(); else this.openOverview();
+  },
+
+  toggleFull:function(){
+    if(!document.fullscreenElement){
+      (document.documentElement.requestFullscreen||function(){}).call(document.documentElement);
+    } else {
+      (document.exitFullscreen||function(){}).call(document);
+    }
+  },
+
+  /* ---- input ---- */
+  bindEvents:function(){
+    var self=this;
+    document.addEventListener('keydown',function(e){
+      var ov=document.getElementById('overview').classList.contains('open');
+      if(e.key==='Escape'){ self.toggleOverview(); e.preventDefault(); return; }
+      if(ov){ return; } // when overview open, ignore nav keys (esc handled)
+      switch(e.key){
+        case ' ': case 'ArrowRight': case 'PageDown':
+          self.next(); e.preventDefault(); break;
+        case 'ArrowLeft': case 'PageUp':
+          self.prev(); e.preventDefault(); break;
+        case 'f': case 'F':
+          self.toggleFull(); e.preventDefault(); break;
+        case 'r': case 'R':
+          self.resetScreen(); e.preventDefault(); break;
+      }
+    });
+
+    // click left/right halves of screen, guarding interactive elements
+    document.getElementById('deck').addEventListener('click',function(e){
+      if(e.target.closest('button,a,input,textarea,select,[data-interactive],.sc-btn,.aicard-toggle')) return;
+      var x=e.clientX, mid=window.innerWidth/2;
+      if(x<mid) self.prev(); else self.next();
+    });
+
+    // chrome buttons
+    document.getElementById('btn-next').addEventListener('click',function(){self.next();});
+    document.getElementById('btn-prev').addEventListener('click',function(){self.prev();});
+    document.getElementById('btn-reset').addEventListener('click',function(){self.resetScreen();});
+    document.getElementById('btn-full').addEventListener('click',function(){self.toggleFull();});
+    document.getElementById('menu-btn').addEventListener('click',function(){self.toggleOverview();});
+    document.getElementById('ov-close').addEventListener('click',function(){self.closeOverview();});
+
+    // re-layout graphs on resize (re-render current screen at current step)
+    var rt;
+    window.addEventListener('resize',function(){
+      clearTimeout(rt);
+      rt=setTimeout(function(){ self.renderScreen(self.idx, self.step, false); }, 180);
+    });
+  }
+};
+
+/* ------------------------------------------------------------
+   DECORATIVE BACKGROUND GENERATION
+   ------------------------------------------------------------ */
+function buildDeco(){
+  var g=document.getElementById('deco-g');
+  if(!g) return;
+  var lanes=[150,330,520,680];
+  var x=0, prevPts=[];
+  // draw a few wandering lanes with dots, repeated to allow seamless drift
+  for(var rep=0;rep<2;rep++){
+    var ox=rep*620;
+    lanes.forEach(function(ly,li){
+      var py=ly;
+      var prevX=null, prevY=null;
+      for(var i=0;i<9;i++){
+        var cx=ox+60+i*70;
+        var cy=ly + (i%3===0? (li%2?20:-20):0);
+        if(prevX!==null){
+          var d='M'+prevX+','+prevY+' C'+((prevX+cx)/2)+','+prevY+' '+((prevX+cx)/2)+','+cy+' '+cx+','+cy;
+          var p=document.createElementNS(SVGNS,'path');
+          p.setAttribute('class','deco-line'); p.setAttribute('d',d); g.appendChild(p);
+        }
+        var c=document.createElementNS(SVGNS,'circle');
+        c.setAttribute('class','deco-dot'); c.setAttribute('cx',cx); c.setAttribute('cy',cy); c.setAttribute('r',9);
+        g.appendChild(c);
+        prevX=cx; prevY=cy;
+      }
+    });
+  }
+}
+
+/* ------------------------------------------------------------
+   BOOT
+   ------------------------------------------------------------ */
+function start(){
+  buildDeco();
+  Deck.screens=[]; // reset
+  Deck.boot();
+}
+if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',start);
+else start();
+
+// expose for debugging / integration
+window.__Deck = Deck;
+
+})();
+</script>
+</body>
+</html>

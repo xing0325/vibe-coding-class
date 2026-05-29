@@ -1439,6 +1439,9 @@
       font-size: 13px;
     }
     .release-detail li { margin: 2px 0; }
+    #repo-star-btn.starred { border-color: var(--attention-emphasis, #9e6a03); background-color: rgba(227,179,65,0.10); }
+    #repo-star-btn.starred .octicon { color: #e3b341; }
+    .file-table tbody tr { cursor: pointer; }
 
     /* Clone dropdown on the green Code button (v3) */
     .code-clone-wrap { position: relative; display: inline-block; }
@@ -3267,6 +3270,31 @@
           toast('✅ 已 fork 到 your-name/vibe-coding-class');
         });
 
+        // --- Star 按钮：点亮 / 取消 ---
+        var starBtn = document.getElementById('repo-star-btn');
+        if (starBtn) {
+          var starCounter = starBtn.querySelector('.counter');
+          starBtn.addEventListener('click', function () {
+            var on = starBtn.classList.toggle('starred');
+            if (starCounter) starCounter.textContent = on ? '3' : '2';
+            starBtn.setAttribute('aria-pressed', on ? 'true' : 'false');
+            toast(on ? '⭐ 已 Star——给项目点了个赞' : '取消了 Star');
+          });
+        }
+
+        // --- 文件行点击：仿真提示（真 GitHub 会进入文件）---
+        var repoFileTable = document.querySelector('[data-tut="repo-file-list"]');
+        if (repoFileTable) {
+          repoFileTable.addEventListener('click', function (e) {
+            var row = e.target.closest('tbody tr');
+            if (!row) return;
+            e.preventDefault();
+            var nameCell = row.querySelector('.file-name');
+            var name = nameCell ? nameCell.textContent.trim() : '这个文件';
+            toast('📄 仿真环境点不进去——真 GitHub 里点「' + name + '」会打开看代码内容');
+          });
+        }
+
         // --- Releases 模块：点击展开 changelog ---
         var releaseRow = document.getElementById('release-row');
         var releaseDetail = document.getElementById('release-detail');
@@ -4110,6 +4138,17 @@ const GLOSSARY = {
   STEPS.splice.apply(STEPS, [idx, 0].concat(narration));
   // 3) PITFALLS.beforeStep >= 锚点id 的同步 +N（旁白插在它们之前，编号要一起后移）
   for (var p = 0; p < PITFALLS.length; p++) { if (PITFALLS[p].beforeStep >= anchorId) PITFALLS[p].beforeStep += N; }
+})();
+
+// ------------------------------------------------------------
+// 增量补丁：仓库导览的"参观型"步骤改 auto（点了看反馈并停留，看完手动下一页）
+// 否则 nextOn:'click' 会在点击后 80ms 把人秒切走，看不到 releases 展开/clone 地址/fork 反馈
+// ------------------------------------------------------------
+(function () {
+  var exploreTargets = ['code-clone-btn', 'repo-releases', 'repo-fork'];
+  STEPS.forEach(function (s) {
+    if (s.target && exploreTargets.indexOf(s.target) !== -1) s.nextOn = 'auto';
+  });
 })();
 
 // 暴露给引擎
@@ -6217,7 +6256,7 @@ window.TUTORIAL_DATA = { STEPS, PITFALLS, GLOSSARY };
 
 </script>
 <script>
-window.TUTORIAL_VERSION = 'v17-repo-tour-collab-2026-05-29';
+window.TUTORIAL_VERSION = 'v18-repo-interactions-2026-05-29';
 (function(){
   function boot(){
     if(!window.TUTORIAL_DATA){console.error('TUTORIAL_DATA missing');return;}

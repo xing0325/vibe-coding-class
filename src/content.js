@@ -787,5 +787,16 @@ const GLOSSARY = {
   for (var p = 0; p < PITFALLS.length; p++) { if (PITFALLS[p].beforeStep >= anchorId) PITFALLS[p].beforeStep += N; }
 })();
 
+// ------------------------------------------------------------
+// 增量补丁：仓库导览的"参观型"步骤改 auto（点了看反馈并停留，看完手动下一页）
+// 否则 nextOn:'click' 会在点击后 80ms 把人秒切走，看不到 releases 展开/clone 地址/fork 反馈
+// ------------------------------------------------------------
+(function () {
+  var exploreTargets = ['code-clone-btn', 'repo-releases', 'repo-fork'];
+  STEPS.forEach(function (s) {
+    if (s.target && exploreTargets.indexOf(s.target) !== -1) s.nextOn = 'auto';
+  });
+})();
+
 // 暴露给引擎
 window.TUTORIAL_DATA = { STEPS, PITFALLS, GLOSSARY };

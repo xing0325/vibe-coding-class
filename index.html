@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Git & GitHub · 给 Vibe Coder 的教学</title>
+<style>
+  :root{
+    --bg:#0d1117; --card:#161b22; --soft:#1a2030; --text:#e6edf3; --dim:#8b949e; --border:#262d3a;
+    --git:#f05133; --green:#2ea043; --blue:#4493f8; --purple:#a78bfa;
+    --mono: ui-monospace, "JetBrains Mono", "SF Mono", Menlo, Consolas, monospace;
+    --sans: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;height:100%;}
+  body{
+    background:var(--bg); color:var(--text); font-family:var(--sans); min-height:100vh;
+    -webkit-font-smoothing:antialiased; overflow-x:hidden; position:relative;
+    display:flex; flex-direction:column; align-items:center; justify-content:center; padding:48px 24px;
+  }
+  body::before{
+    content:''; position:fixed; inset:0; z-index:-2; pointer-events:none;
+    background:
+      radial-gradient(820px 520px at 14% -6%, rgba(240,81,51,.18), transparent 60%),
+      radial-gradient(760px 620px at 110% 16%, rgba(68,147,248,.14), transparent 55%),
+      radial-gradient(640px 640px at 50% 124%, rgba(167,139,250,.12), transparent 60%),
+      linear-gradient(180deg,#0c1018,#0d1117 55%,#090c12);
+  }
+  body::after{
+    content:''; position:fixed; inset:0; z-index:-1; pointer-events:none; opacity:.04;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  }
+  .hero{text-align:center; margin-bottom:48px; animation:rise .7s both;}
+  .badge{
+    display:inline-flex; align-items:center; gap:8px; padding:6px 15px; border-radius:999px; margin-bottom:22px;
+    font-family:var(--mono); font-size:12px; letter-spacing:.1em; text-transform:uppercase;
+    color:var(--git); background:rgba(240,81,51,.12); border:1px solid rgba(240,81,51,.32);
+  }
+  .badge::before{content:''; width:7px; height:7px; border-radius:50%; background:var(--git); box-shadow:0 0 8px var(--git);}
+  h1{
+    margin:0 0 16px; font-size:clamp(34px,6.5vw,62px); font-weight:800; letter-spacing:-.03em; line-height:1.05;
+    background:linear-gradient(120deg,#fff,#c9d4e8 42%,var(--git)); -webkit-background-clip:text; background-clip:text; -webkit-text-fill-color:transparent;
+  }
+  .hero p{margin:0 auto; max-width:560px; color:var(--dim); font-size:17px; line-height:1.7;}
+  .cards{display:grid; grid-template-columns:repeat(auto-fit,minmax(280px,1fr)); gap:20px; width:100%; max-width:860px;}
+  .card{
+    position:relative; overflow:hidden; text-decoration:none; color:inherit; display:block;
+    background:linear-gradient(165deg,var(--card),#10141d); border:1px solid var(--border); border-radius:18px;
+    padding:30px 28px; transition:transform .2s cubic-bezier(.2,.8,.2,1), border-color .2s, box-shadow .2s;
+    animation:rise .7s both;
+  }
+  .card:nth-child(1){animation-delay:.08s;}
+  .card:nth-child(2){animation-delay:.16s;}
+  .card::before{content:''; position:absolute; left:0; top:22px; bottom:22px; width:4px; border-radius:4px; background:var(--cc); box-shadow:0 0 18px var(--cc); transition:top .2s,bottom .2s;}
+  .card::after{content:''; position:absolute; inset:0; opacity:0; transition:opacity .2s; background:radial-gradient(340px 180px at 82% 0%, color-mix(in srgb,var(--cc) 16%,transparent), transparent 70%);}
+  .card:hover{transform:translateY(-6px); border-color:color-mix(in srgb,var(--cc) 55%,var(--border)); box-shadow:0 20px 50px rgba(0,0,0,.5);}
+  .card:hover::before{top:10px; bottom:10px;}
+  .card:hover::after{opacity:1;}
+  .card .emoji{font-size:38px; line-height:1; margin-bottom:16px; display:block; filter:drop-shadow(0 3px 10px rgba(0,0,0,.4));}
+  .card h2{margin:0 0 8px; font-size:23px; font-weight:700;}
+  .card .tag{font-family:var(--mono); font-size:11px; letter-spacing:.08em; color:var(--cc); text-transform:uppercase; margin-bottom:14px; display:block;}
+  .card p{margin:0 0 18px; color:var(--dim); font-size:14.5px; line-height:1.65;}
+  .card .go{display:inline-flex; align-items:center; gap:7px; font-weight:600; font-size:14px; color:var(--cc);}
+  .card .go::after{content:'→'; transition:transform .2s;}
+  .card:hover .go::after{transform:translateX(5px);}
+  .foot{margin-top:44px; color:var(--dim); font-size:13px; font-family:var(--mono); text-align:center; line-height:1.8;}
+  .foot a{color:var(--blue); text-decoration:none;}
+  @keyframes rise{from{opacity:0; transform:translateY(20px);} to{opacity:1; transform:translateY(0);}}
+</style>
+</head>
+<body>
+  <div class="hero">
+    <span class="badge">Vibe Coder 友好 · 零基础</span>
+    <h1>Git &amp; GitHub<br>给 Vibe Coder 的教学</h1>
+    <p>不背命令，只理解效果，然后用人话告诉 AI。先在幻灯片里看懂 Git 的设计，再去仿真 GitHub 里亲手走一遍协作。</p>
+  </div>
+
+  <div class="cards">
+    <a class="card" href="git-course.html" style="--cc:#f05133;">
+      <span class="emoji">📚</span>
+      <span class="tag">理论 · 幻灯片演示</span>
+      <h2>Git 大串讲</h2>
+      <p>11 章互动幻灯片：commit / 分支 / HEAD / 后悔药 / 冲突 / cherry-pick / worktree，用发光树状图和亲手互动讲透 Git 的设计之美。</p>
+      <span class="go">开始学习</span>
+    </a>
+    <a class="card" href="github-tutorial.html" style="--cc:#2ea043;">
+      <span class="emoji">🎮</span>
+      <span class="tag">实操 · 仿真 GitHub</span>
+      <h2>实战演练</h2>
+      <p>在像素级仿真的 GitHub 里，跟着 spotlight 高亮一步步亲手做：认识仓库页 → 开 issue → 切分支 → 提 PR → review → merge。</p>
+      <span class="go">进入演练</span>
+    </a>
+  </div>
+
+  <div class="foot">
+    建议先看「Git 大串讲」，再做「实战演练」<br>
+    💡 桌面/投影宽屏体验最佳 · 键盘 ← → 翻页
+  </div>
+</body>
+</html>

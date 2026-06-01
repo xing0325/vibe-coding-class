@@ -1,5 +1,5 @@
 /* ============================================================
- * 第 6 章 · 三颗后悔药（去重合并）  (chapter:6, play:true)
+ * 第 6 章 · 三颗后悔药（去重合并）  (chapter:7, play:true)
  * 把 discard / reset / revert / checkout 统一成「按你想撤销什么来选药」。
  * 屏 6.1 triage     · 分诊台（四入口决策卡 → 跳对应屏）
  * 屏 6.2 discard    · 丢掉未提交改动
@@ -103,8 +103,8 @@
   /* 屏 6.1 — 分诊台                                         */
   /* ====================================================== */
   window.registerScreen({
-    chapter: 6,
-    chapterName: '三颗后悔药',
+    chapter: 7,
+    chapterName: '回到后悔药·原理与第四颗药',
     id: 'triage',
     title: '分诊台',
     subtitle: '按你想撤销什么来选药',
@@ -171,8 +171,8 @@
   /* 屏 6.2 — discard                                        */
   /* ====================================================== */
   window.registerScreen({
-    chapter: 6,
-    chapterName: '三颗后悔药',
+    chapter: 7,
+    chapterName: '回到后悔药·原理与第四颗药',
     id: 'discard',
     title: 'discard · 丢掉未提交改动',
     subtitle: '回到上次 commit 的干净态',
@@ -264,8 +264,8 @@
   /* 屏 6.3 — reset --hard                                   */
   /* ====================================================== */
   window.registerScreen({
-    chapter: 6,
-    chapterName: '三颗后悔药',
+    chapter: 7,
+    chapterName: '回到后悔药·原理与第四颗药',
     id: 'reset',
     title: 'reset --hard · 分支整段退回',
     subtitle: '最暴力 · 会重写历史',
@@ -339,8 +339,8 @@
   /* 屏 6.4 — revert                                         */
   /* ====================================================== */
   window.registerScreen({
-    chapter: 6,
-    chapterName: '三颗后悔药',
+    chapter: 7,
+    chapterName: '回到后悔药·原理与第四颗药',
     id: 'revert',
     title: 'revert · 新建提交抵消',
     subtitle: '历史全保留 · push 过也安全',
@@ -407,8 +407,8 @@
   /* 屏 6.5 — checkout（只是去看看）                          */
   /* ====================================================== */
   window.registerScreen({
-    chapter: 6,
-    chapterName: '三颗后悔药',
+    chapter: 7,
+    chapterName: '回到后悔药·原理与第四颗药',
     id: 'checkout',
     title: 'checkout · 只是去看看',
     subtitle: '分离头指针 · 分支不动',
@@ -473,8 +473,8 @@
   /* 屏 6.6 — 四味药对照表                                    */
   /* ====================================================== */
   window.registerScreen({
-    chapter: 6,
-    chapterName: '三颗后悔药',
+    chapter: 7,
+    chapterName: '回到后悔药·原理与第四颗药',
     id: 'undo-table',
     title: '四味药对照表',
     subtitle: '一张表收尾',

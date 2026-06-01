@@ -23,8 +23,8 @@
   }
 
   register({
-    chapter: 4,
-    chapterName: 'Branch + Merge',
+    chapter: 5,
+    chapterName: '分支 Branch',
     id: 'ch4-branch-merge',
     title: '分支与合并',
     subtitle: '开线 → 并行 → 合回主干',

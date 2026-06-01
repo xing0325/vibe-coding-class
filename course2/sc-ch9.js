@@ -140,7 +140,7 @@
   /* 屏 9.1 — 什么是 worktree                               */
   /* ====================================================== */
   register({
-    chapter: 9,
+    chapter: 10,
     chapterName: 'Worktree（进阶/彩蛋）',
     id: 'worktree-what',
     title: '什么是 worktree',
@@ -255,7 +255,7 @@
   /* 屏 9.2 — 不是平行宇宙，是投影                          */
   /* ====================================================== */
   register({
-    chapter: 9,
+    chapter: 10,
     chapterName: 'Worktree（进阶/彩蛋）',
     id: 'worktree-projection',
     title: '不是平行宇宙，是投影',
@@ -372,7 +372,7 @@
   /* 屏 9.3 — Q&A：触摸 git 本质（悬念式 reveal）           */
   /* ====================================================== */
   register({
-    chapter: 9,
+    chapter: 10,
     chapterName: 'Worktree（进阶/彩蛋）',
     id: 'worktree-qa',
     title: 'Q&A：触摸 git 本质',
@@ -459,7 +459,7 @@
   /* 屏 9.4 — Vibe coder 的杀手级用法（3 个 agent 并行）     */
   /* ====================================================== */
   register({
-    chapter: 9,
+    chapter: 10,
     chapterName: 'Worktree（进阶/彩蛋）',
     id: 'worktree-killer',
     title: 'Vibe coder 的杀手级用法',

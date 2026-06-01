@@ -152,7 +152,7 @@
   var TL_META = [
     { msg: "初始化项目骨架", date: "周一 09:12", author: "你", hash: "f0a1b2c" },
     { msg: "加上登录页面", date: "周一 15:40", author: "你", hash: "9c3d4e5" },
-    { msg: "接入数据库", date: "周二 11:02", author: "同事 A", hash: "1a2b3c4" },
+    { msg: "接入数据库", date: "周二 11:02", author: "你", hash: "1a2b3c4" },
     { msg: "准备上线，定稿", date: "周三 18:30", author: "你", hash: "d5e6f70" },
     { msg: "改了文案，真最终", date: "周四 10:15", author: "你", hash: "7b8c9d0" },
     { msg: "老板又要改…最后一次", date: "周五 20:48", author: "你", hash: "e1f2a3b" }
@@ -163,19 +163,19 @@
     chapterName: CHNAME,
     id: "what-commit",
     title: "什么是 commit",
-    subtitle: "每个 commit ＝ 一次快照 ＝ 一个版本",
+    subtitle: "上一章那一排小圆点——每个点，就是一次 commit",
     render: function (stage, api) {
       injectCSS();
       killStray(".c-ch2-pop");
 
-      stage.appendChild(h("div", "sc-pill", "commit ＝ 版本控制的原子"));
+      stage.appendChild(h("div", "sc-pill", "上一章的小圆点，揭晓了"));
       var hh = h("h1", "sc-h1");
       hh.style.marginTop = "12px";
-      hh.innerHTML = "每个 <span style='color:var(--git)'>commit</span> ＝ 一次快照 ＝ 一个版本";
+      hh.innerHTML = "一次 <span style='color:var(--git)'>commit</span> ＝ 给项目按一次「保存」，存下当前这一版";
       stage.appendChild(hh);
       var lead = h("p", "sc-lead sc-dim");
       lead.style.marginTop = "10px";
-      lead.textContent = "commit 链 ＝ 项目的变迁史，每一版都能回溯。";
+      lead.innerHTML = "就像在 Word 里按 <b style='color:var(--text)'>Ctrl+S</b> 存一版——只不过 Git 会把每一版都好好排成一串，随时翻回去看。";
       stage.appendChild(lead);
 
       /* 时间线 SVG：横向 6 节点 */
@@ -448,7 +448,7 @@
           '<div class="txt typing">正在输入…</div>';
         document.body.appendChild(chat);
         void chat.offsetWidth; chat.classList.add("show");
-        var line = "帮我回退到 " + SHORT_HASH;
+        var line = "我说的是 " + SHORT_HASH + " 那一版";
         var i = 0, txtEl = chat.querySelector(".txt");
         clearInterval(aiBtn._iv);
         aiBtn._iv = setInterval(function () {
@@ -467,16 +467,18 @@
         }, 4200);
       });
 
-      /* 第 3 步：AI 命令卡——把效果翻成真命令 */
-      var aiCard = api.aiCard({
-        effect: "回到某个历史版本",
-        say: "帮我回退到 " + SHORT_HASH,
-        cmd: "git reset --hard " + SHORT_HASH
-      });
-      aiCard.style.marginTop = "6px";
+      /* 第 3 步：预告卡——hash 是「这次提交的代号」，下一章拿它指认版本
+         ⚠ 知识锁：第 2 章不讲"回退/后悔药"，这里只点明它是个可以报给 AI 的代号，
+            具体能拿它做什么留到下一章揭晓（不出现 reset / 回退 / 分支 等词）。 */
+      var teaser = h("div", "sc-card");
+      teaser.style.marginTop = "6px"; teaser.style.maxWidth = "620px";
+      teaser.innerHTML =
+        '<p class="sc-p"><b style="color:var(--git)">这串代号 ＝ 这次提交的名字。</b><br>' +
+        '记不住没关系——复制下来，或者直接报给 AI，就能精确指认「我说的是<span class="sc-mono">' + esc(SHORT_HASH) + '</span>那一版」。' +
+        '<br><span class="sc-dim">至于拿这个代号还能让 AI 替你做什么，<b style="color:var(--c-purple)">下一章揭晓 →</b></span></p>';
       var holder = h("div"); holder.style.display = "flex"; holder.style.justifyContent = "center";
       holder.style.width = "100%";
-      holder.appendChild(aiCard);
+      holder.appendChild(teaser);
       api.frag(holder);
       box.appendChild(holder);
 

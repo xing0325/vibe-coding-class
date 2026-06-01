@@ -71,7 +71,7 @@
   /* 屏 7.1 — 比较两次提交                                   */
   /* ====================================================== */
   window.registerScreen({
-    chapter: 7,
+    chapter: 8,
     chapterName: 'git diff',
     id: 'diff',
     title: '比较两次提交',

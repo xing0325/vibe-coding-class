@@ -9,14 +9,18 @@
    CONFIG / TOKENS
    ============================================================ */
 :root{
-  --bg:#0D1117; --text:#E6EDF3; --dim:#8B949E; --git:#F05133;
-  --c-main:#E6EDF3; --c-teal:#2DD4BF; --c-purple:#A78BFA; --c-amber:#FBBF24; --c-pink:#F472B6;
-  --info:#58A6FF; --warn:#3B82F6; --ghost:#4B5563;
+  /* ---- Deep-Space Terminal (v2) ---- */
+  --bg:#0a0e16; --text:#E6EDF3; --dim:#8B949E; --git:#F1502F;
+  /* branch palette: main=cool silver, feature=git orange, feature2=teal, experimental=magenta */
+  --c-main:#E6EDF3; --c-teal:#39D0D8; --c-purple:#A78BFA; --c-amber:#FBBF24; --c-pink:#FF4D9D;
+  --c-magenta:#FF4D9D;
+  --info:#58A6FF; --warn:#3E5C8A; --ghost:#4B5563;
 
-  --font-sans:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang SC','Microsoft YaHei',sans-serif;
-  --font-mono:'JetBrains Mono',ui-monospace,'SF Mono',Menlo,Consolas,monospace;
+  --font-sans:'Source Han Sans SC','Noto Sans CJK SC',-apple-system,BlinkMacSystemFont,'PingFang SC','Microsoft YaHei',sans-serif;
+  --font-mono:'IBM Plex Mono','JetBrains Mono',ui-monospace,'SF Mono',Menlo,Consolas,monospace;
+  --font-quote:'LXGW WenKai','LXGW WenKai Screen',Georgia,'KaiTi','楷体',serif;
 
-  --pane:#161B22; --pane2:#1C2230; --border:#30363D;
+  --pane:#10151f; --pane2:#161d2b; --border:#26303f;
   --ease:cubic-bezier(.22,.61,.36,1);
 }
 
@@ -38,6 +42,30 @@ body{
 @keyframes drift{from{transform:translateX(0)}to{transform:translateX(-220px)}}
 .deco-dot{fill:var(--text);opacity:.06}
 .deco-line{stroke:var(--text);stroke-width:2;opacity:.045;fill:none}
+.deco-star{fill:var(--text)}
+
+/* faint star-field grid + noise texture layered above the drifting graph */
+#bg-stars{
+  position:fixed;inset:0;z-index:0;pointer-events:none;
+  background-image:
+    radial-gradient(circle at center, rgba(230,237,243,.55) 0, rgba(230,237,243,0) 60%);
+  background-size:3px 3px;
+  background-position:0 0;
+  opacity:.10;
+}
+#bg-grid{
+  position:fixed;inset:0;z-index:0;pointer-events:none;opacity:.5;
+  background-image:
+    linear-gradient(rgba(57,208,216,.04) 1px,transparent 1px),
+    linear-gradient(90deg,rgba(57,208,216,.04) 1px,transparent 1px);
+  background-size:48px 48px;
+  -webkit-mask-image:radial-gradient(ellipse 80% 70% at 50% 45%,#000 30%,transparent 100%);
+  mask-image:radial-gradient(ellipse 80% 70% at 50% 45%,#000 30%,transparent 100%);
+}
+#bg-noise{
+  position:fixed;inset:0;z-index:0;pointer-events:none;opacity:.035;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
 
 /* ============================================================
    STAGE / SCREEN LAYOUT
@@ -69,6 +97,18 @@ body{
 .sc-dim{color:var(--dim)}
 .sc-mono{font-family:var(--font-mono);font-feature-settings:"liga" 0}
 .sc-center{text-align:center}
+
+/* 金句 / punch-line type — 霞鹜文楷 with system 楷体 fallback (no external font) */
+.sc-quote{
+  font-family:var(--font-quote);
+  font-size:clamp(20px,2.6vw,32px);
+  font-weight:400;line-height:1.7;letter-spacing:.01em;
+  color:var(--text);
+  padding:.2em 0;
+  text-wrap:balance;
+}
+.sc-quote.big{font-size:clamp(26px,4vw,46px);line-height:1.55}
+.sc-quote .accent{color:var(--git)}
 
 .sc-pill{
   display:inline-flex;align-items:center;gap:6px;
@@ -164,6 +204,19 @@ body{
 .cg-node .label{font-family:var(--font-mono);font-size:12px;fill:var(--bg);font-weight:700;text-anchor:middle;dominant-baseline:central;pointer-events:none}
 .cg-node.dark-label .label{fill:var(--bg)}
 .cg-node.light-label .label{fill:#010409}
+
+/* bare-mode: short hash printed under each node */
+.cg-hash{
+  font-family:var(--font-mono);font-size:11px;font-weight:500;
+  fill:var(--dim);text-anchor:middle;dominant-baseline:hanging;
+  letter-spacing:.02em;pointer-events:none;
+}
+/* bare-mode "你在这" marker — plain pointer, never the HEAD flag */
+.cg-here{transition:transform .4s var(--ease),opacity .4s}
+.cg-here rect{fill:var(--git);rx:5}
+.cg-here text{fill:#fff;font-family:var(--font-sans);font-size:11.5px;font-weight:700;text-anchor:middle;dominant-baseline:central}
+.cg-here .stem{stroke:var(--git);stroke-width:2.5}
+.cg-here .dot{fill:var(--git)}
 
 .cg-pill{
   font-family:var(--font-mono);font-size:12px;font-weight:700;
@@ -284,6 +337,11 @@ body{
 </head>
 <body>
 
+<!-- deep-space backdrop: noise + faint grid + star-field + drifting commit graph -->
+<div id="bg-noise" aria-hidden="true"></div>
+<div id="bg-grid" aria-hidden="true"></div>
+<div id="bg-stars" aria-hidden="true"></div>
+
 <!-- decorative drifting commit graph -->
 <div id="bg-deco" aria-hidden="true">
   <svg viewBox="0 0 1200 800" preserveAspectRatio="xMidYMid slice">
@@ -348,237 +406,390 @@ body{
 <!-- sc-ch0 -->
 <script>
 /* ============================================================
- * 第 0 章 · 封面 + 总纲
- * 屏 0.1 cover    · 封面
- * 屏 0.2 legend   · 这门课怎么上（主题词 + 视觉图例 + 三层卡示意）
+ * 第 0 章 · 开场  (chapter:0, chapterName:'开场')
+ *   屏 0.1 cover        · 封面（深空终端：漂浮圆点 + 连线粒子 + 鼠标视差 + 极淡裸节点漂移）
+ *   屏 0.2 chapter-map  · 章节地图（横向圆点链，v2 新顺序；兼 Esc 总览页）
+ *
  * 样式前缀: c-ch0-
- * 仅调用框架契约：window.registerScreen / api.step / api.frag / api.aiCard ...
+ * 仅调用框架契约：window.registerScreen / api.step / api.frag / api.graph / api.isReplay
+ *
+ * v2 分镜要点：
+ *   - 封面定调；除文楷副标题外不出现任何 git 术语。
+ *   - 章节地图用「新顺序」：后悔药(4) 排在 分支(5) 之前。
+ *     1 为什么需要 Git → 2 Commit → 3 本地/远端 → 4 三颗后悔药 → 5 分支
+ *     → 6 指针与 HEAD → 7 回到后悔药·原理 → 8 git diff → 9 多人协作 → 10 worktree → 结尾
+ *   - 这里的「显示顺序/章号」是 v2 叙事顺序，与底层已注册脚本的真实 chapter 号不同。
+ *     每个节点带 targetChapter = 真实已注册的 chapter 号，点击时遍历
+ *     window.__Deck.screens 找到第一个 s.chapter===targetChapter 跳过去。
+ *     找不到 __Deck 就兜底：高亮该节点 + 轻提示。
+ *   - 节点只显示「章号 + 章名」，不剧透概念（不写"分支""HEAD"之类解释）。
+ *
+ * 幂等：每次进入(含后退/resize) fresh 调 render；漂移/视差为纯 CSS 动画 + 一次性监听，
+ *       重建 DOM 时旧监听随节点销毁，不泄漏。
  * ============================================================ */
 (function () {
   'use strict';
 
-  /* 一次性注入本章作用域样式（多屏共用；重复进入屏不会重复注入） */
+  function register(def) {
+    if (typeof window.registerScreen === 'function') { window.registerScreen(def); }
+    else { (window.__pendingScreens = window.__pendingScreens || []).push(def); }
+  }
+
+  /* ---------- 章节地图数据（v2 叙事顺序）----------
+     n      : 地图上显示的章号（叙事顺序，1..10）
+     name   : 显示的章名（不剧透概念）
+     blurb  : 悬停弹出的一句话简介（简短、不剧透概念）
+     target : 真实已注册的 chapter 号（用于跳转；可能与 n 不同）
+     accent : 节点配色（teal/git/purple/amber/main），点缀用
+     最后追加一个「结尾」终点节点。 */
+  var MAP = [
+    { n: 1,  name: '为什么需要 Git',  blurb: '没有它的那些深夜，到底有多痛。',       target: 1,  accent: 'main'   },
+    { n: 2,  name: 'Commit',          blurb: '把"现在这一刻"稳稳地存下来。',         target: 2,  accent: 'teal'   },
+    { n: 3,  name: '本地 / 远端',      blurb: '你电脑里的，和云上那份，是怎么对上的。', target: 3,  accent: 'teal'   },
+    { n: 4,  name: '三颗后悔药',       blurb: '手滑了？先学怎么把日子倒回去。',       target: 4,  accent: 'git'    },
+    { n: 5,  name: '分支',            blurb: '同一个项目，开几条平行的路一起走。',     target: 5,  accent: 'git'    },
+    { n: 6,  name: '指针与 HEAD',      blurb: '搞清楚"你现在到底站在哪一格"。',       target: 6,  accent: 'purple' },
+    { n: 7,  name: '后悔药·原理',      blurb: '回头看：那三颗药为什么真的灵。',       target: 7,  accent: 'amber'  },
+    { n: 8,  name: 'git diff',        blurb: '一眼看出这次到底改了哪几行。',         target: 8,  accent: 'teal'   },
+    { n: 9,  name: '多人协作',         blurb: '一群人改同一个项目，怎么不打架。',     target: 9,  accent: 'git'    },
+    { n: 10, name: 'worktree',        blurb: '同时摊开好几个工作台，互不干扰。',     target: 10, accent: 'purple' },
+    { n: '✓', name: '结尾',           blurb: '收个尾，看看你都拿下了什么。',         target: 11, accent: 'main', end: true }
+  ];
+
+  var ACCENT_VAR = {
+    main:   'var(--c-main)',
+    teal:   'var(--c-teal)',
+    git:    'var(--git)',
+    purple: 'var(--c-purple)',
+    amber:  'var(--c-amber)'
+  };
+
+  /* ====================================================== */
+  /* 样式（两屏共用，仅注入一次）                            */
+  /* ====================================================== */
   function injectStyle() {
     if (document.getElementById('c-ch0-style')) return;
     var s = document.createElement('style');
     s.id = 'c-ch0-style';
     s.textContent = [
-      /* ---------- 屏 0.1 封面 ---------- */
-      '.c-ch0-cover{position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;min-height:62vh;overflow:hidden;}',
-      /* 背景极淡的 commit 图，自左向右缓慢漂移 */
-      '.c-ch0-bg{position:absolute;inset:0;z-index:0;pointer-events:none;opacity:0.16;overflow:hidden;}',
-      '.c-ch0-bg-track{position:absolute;top:50%;left:0;transform:translateY(-50%);will-change:transform;animation:c-ch0-drift 38s linear infinite;}',
-      '@keyframes c-ch0-drift{from{transform:translate(0,-50%);}to{transform:translate(-50%,-50%);}}',
-      '.c-ch0-cover-inner{position:relative;z-index:1;}',
-      '.c-ch0-title{font-family:var(--font-sans);font-size:clamp(34px,7vw,76px);font-weight:800;letter-spacing:-0.03em;line-height:1.08;margin:0 0 18px;',
-      'background:linear-gradient(120deg,var(--text) 0%,var(--c-teal) 55%,var(--git) 100%);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;',
-      'opacity:0;animation:c-ch0-rise .9s .05s cubic-bezier(.2,.8,.2,1) forwards;}',
-      '.c-ch0-title .c-ch0-mono{font-family:var(--font-mono);}',
-      '.c-ch0-sub{font-size:clamp(15px,2.4vw,21px);color:var(--dim);letter-spacing:0.04em;margin:0 0 40px;opacity:0;animation:c-ch0-rise .9s .28s cubic-bezier(.2,.8,.2,1) forwards;}',
+      /* ============ 屏 0.1 封面 ============ */
+      '.c-ch0-cover{position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;min-height:70vh;width:100%;overflow:hidden;}',
+
+      /* 漂浮圆点 + 连线粒子层（SVG，CSS 缓慢漂移；鼠标视差作用于此容器） */
+      '.c-ch0-particles{position:absolute;inset:-8%;z-index:0;pointer-events:none;will-change:transform;transition:transform .6s cubic-bezier(.2,.8,.2,1);}',
+      '.c-ch0-particles svg{width:100%;height:100%;display:block;}',
+      '.c-ch0-pdrift{animation:c-ch0-pdrift 64s linear infinite;transform-origin:center;}',
+      '@keyframes c-ch0-pdrift{from{transform:translateX(0);}to{transform:translateX(-260px);}}',
+      '.c-ch0-pdot{fill:var(--c-teal);}',
+      '.c-ch0-pdot.git{fill:var(--git);}',
+      '.c-ch0-pline{stroke:var(--text);fill:none;stroke-width:1;}',
+      '.c-ch0-pfloat{animation:c-ch0-float 7s ease-in-out infinite;transform-origin:center;}',
+      '@keyframes c-ch0-float{0%,100%{transform:translateY(0);}50%{transform:translateY(-10px);}}',
+
+      /* 极淡裸节点漂移（api.graph bare 模式，呼应主视觉 commit 图） */
+      '.c-ch0-barebg{position:absolute;left:0;right:0;top:50%;z-index:0;pointer-events:none;opacity:0.12;',
+      'transform:translateY(-50%);-webkit-mask-image:linear-gradient(90deg,transparent,#000 18%,#000 82%,transparent);mask-image:linear-gradient(90deg,transparent,#000 18%,#000 82%,transparent);}',
+      '.c-ch0-baretrack{animation:c-ch0-bdrift 50s linear infinite;will-change:transform;}',
+      '@keyframes c-ch0-bdrift{from{transform:translateX(0);}to{transform:translateX(-46px);}}',
+      '.c-ch0-barebg .cg-wrap{width:200%;}',
+
+      '.c-ch0-cover-inner{position:relative;z-index:2;display:flex;flex-direction:column;align-items:center;}',
+      '.c-ch0-title{font-family:var(--font-sans);font-size:clamp(30px,6.4vw,72px);font-weight:800;letter-spacing:-0.03em;line-height:1.1;margin:0 0 22px;max-width:18ch;',
+      'background:linear-gradient(118deg,var(--text) 0%,var(--c-teal) 52%,var(--git) 100%);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;',
+      'opacity:0;animation:c-ch0-rise .9s .06s cubic-bezier(.2,.8,.2,1) forwards;}',
+      '.c-ch0-title .c-ch0-amp{font-family:var(--font-mono);font-weight:600;color:var(--git);-webkit-text-fill-color:var(--git);padding:0 .06em;}',
+      '.c-ch0-sub{margin:0 0 44px;max-width:24ch;opacity:0;animation:c-ch0-rise .9s .30s cubic-bezier(.2,.8,.2,1) forwards;}',
+      '.c-ch0-sub.sc-quote{color:var(--text);}',
+      '.c-ch0-sub .accent{color:var(--git);}',
       '.c-ch0-start{display:inline-flex;align-items:center;gap:10px;font-family:var(--font-mono);font-size:15px;color:var(--text);padding:11px 22px;border-radius:999px;',
-      'background:color-mix(in srgb,var(--git) 14%,transparent);border:1px solid color-mix(in srgb,var(--git) 45%,transparent);opacity:0;animation:c-ch0-rise .9s .52s cubic-bezier(.2,.8,.2,1) forwards,c-ch0-pulse 2.4s 1.4s ease-in-out infinite;}',
-      '.c-ch0-start .c-ch0-key{display:inline-block;min-width:60px;text-align:center;padding:2px 8px;border-radius:6px;background:color-mix(in srgb,var(--text) 8%,transparent);border:1px solid color-mix(in srgb,var(--text) 18%,transparent);}',
+      'background:color-mix(in srgb,var(--git) 13%,transparent);border:1px solid color-mix(in srgb,var(--git) 45%,transparent);',
+      'opacity:0;animation:c-ch0-rise .9s .54s cubic-bezier(.2,.8,.2,1) forwards,c-ch0-pulse 2.6s 1.5s ease-in-out infinite;}',
+      '.c-ch0-start .key{display:inline-block;min-width:54px;text-align:center;padding:2px 9px;border-radius:6px;background:color-mix(in srgb,var(--text) 8%,transparent);border:1px solid color-mix(in srgb,var(--text) 18%,transparent);}',
       '@keyframes c-ch0-rise{from{opacity:0;transform:translateY(22px);}to{opacity:1;transform:translateY(0);}}',
       '@keyframes c-ch0-pulse{0%,100%{box-shadow:0 0 0 0 color-mix(in srgb,var(--git) 30%,transparent);}50%{box-shadow:0 0 0 9px color-mix(in srgb,var(--git) 0%,transparent);}}',
 
-      /* ---------- 屏 0.2 总纲 ---------- */
-      '.c-ch0-legend-wrap{display:grid;grid-template-columns:1.15fr 1fr;gap:34px;align-items:start;}',
-      '@media (max-width:760px){.c-ch0-legend-wrap{grid-template-columns:1fr;gap:26px;}}',
-      '.c-ch0-motto{font-family:var(--font-sans);font-size:clamp(24px,3.6vw,40px);font-weight:800;line-height:1.32;letter-spacing:-0.01em;margin:6px 0 22px;min-height:4.6em;}',
-      '.c-ch0-motto .c-ch0-hl{color:var(--c-teal);}',
-      '.c-ch0-motto .c-ch0-hl2{color:var(--git);}',
-      '.c-ch0-caret{display:inline-block;width:0.55ch;background:var(--c-teal);color:transparent;animation:c-ch0-blink 1s steps(1) infinite;margin-left:1px;border-radius:1px;}',
-      '@keyframes c-ch0-blink{0%,49%{opacity:1;}50%,100%{opacity:0;}}',
-      '.c-ch0-legend-card{background:color-mix(in srgb,var(--text) 4%,transparent);border:1px solid color-mix(in srgb,var(--text) 12%,transparent);border-radius:16px;padding:22px 22px 18px;}',
-      '.c-ch0-legend-card h3{margin:0 0 16px;font-size:13px;font-family:var(--font-mono);letter-spacing:0.14em;text-transform:uppercase;color:var(--dim);}',
-      '.c-ch0-legend-row{display:flex;align-items:center;gap:14px;padding:11px 0;border-top:1px dashed color-mix(in srgb,var(--text) 12%,transparent);}',
-      '.c-ch0-legend-row:first-of-type{border-top:none;}',
-      '.c-ch0-legend-sym{flex:0 0 64px;display:flex;align-items:center;justify-content:center;height:34px;font-size:22px;}',
-      '.c-ch0-legend-txt{font-size:15px;line-height:1.5;color:var(--text);}',
-      '.c-ch0-legend-txt b{color:var(--c-teal);}',
-      '.c-ch0-legend-txt .c-ch0-m{font-family:var(--font-mono);color:var(--dim);font-size:13px;}',
-      '.c-ch0-demo-hint{margin:18px 0 8px;font-size:13px;color:var(--dim);text-align:center;}',
-      '.c-ch0-demo-hint b{color:var(--git);}',
-      /* 图例符号的小 SVG */
-      '.c-ch0-sym-commit{width:18px;height:18px;border-radius:50%;background:var(--c-main);box-shadow:0 0 10px color-mix(in srgb,var(--c-main) 70%,transparent);}',
-      '.c-ch0-sym-branch{width:46px;height:4px;border-radius:3px;background:var(--c-teal);box-shadow:0 0 10px color-mix(in srgb,var(--c-teal) 60%,transparent);}',
-      '.c-ch0-sym-head{font-size:20px;}',
-      '.c-ch0-sym-astro{font-size:22px;}'
+      /* ============ 屏 0.2 章节地图 ============ */
+      '.c-ch0-map{width:100%;max-width:1080px;margin:0 auto;display:flex;flex-direction:column;align-items:center;}',
+      '.c-ch0-map-head{text-align:center;margin-bottom:6px;}',
+      '.c-ch0-map-sub{color:var(--dim);font-size:14px;margin-top:6px;}',
+      '.c-ch0-map-sub .k{font-family:var(--font-mono);color:var(--text);background:color-mix(in srgb,var(--text) 8%,transparent);border:1px solid var(--border);border-radius:5px;padding:1px 7px;}',
+
+      /* 横向圆点链：可横向滚动；中央一条连线，节点骑在线上 */
+      '.c-ch0-chain-scroll{width:100%;overflow-x:auto;overflow-y:visible;padding:78px 8px 70px;-webkit-overflow-scrolling:touch;}',
+      '.c-ch0-chain{position:relative;display:flex;align-items:center;gap:0;min-width:max-content;margin:0 auto;padding:0 24px;}',
+      /* 连线段（节点之间的横线） */
+      '.c-ch0-link{flex:0 0 38px;height:3px;border-radius:3px;background:color-mix(in srgb,var(--text) 18%,transparent);position:relative;}',
+      '.c-ch0-link::after{content:"";position:absolute;inset:0;border-radius:3px;background:var(--git);transform:scaleX(0);transform-origin:left;transition:transform .4s var(--ease);}',
+      '.c-ch0-link.done::after{transform:scaleX(1);}',
+
+      /* 单个节点（按钮，可点击/可聚焦） */
+      '.c-ch0-node{position:relative;flex:0 0 auto;display:flex;flex-direction:column;align-items:center;',
+      'background:none;border:none;cursor:pointer;padding:0;font-family:inherit;color:inherit;outline:none;}',
+      '.c-ch0-dot{width:42px;height:42px;border-radius:50%;display:flex;align-items:center;justify-content:center;',
+      'font-family:var(--font-mono);font-size:15px;font-weight:800;color:var(--bg);',
+      'background:var(--c-main);border:2px solid #010409;box-shadow:0 0 0 0 transparent;',
+      'transition:transform .25s var(--ease),box-shadow .25s var(--ease),background .25s,opacity .25s;}',
+      '.c-ch0-node .c-ch0-name{margin-top:12px;font-size:13px;font-weight:600;color:var(--dim);white-space:nowrap;letter-spacing:.01em;transition:color .25s,transform .25s var(--ease);max-width:9ch;text-align:center;line-height:1.2;}',
+      /* end 节点（结尾）做成对勾收束样式 */
+      '.c-ch0-node.is-end .c-ch0-dot{font-size:18px;}',
+
+      /* 悬停 / 聚焦：放大 + 发光 + 名字变亮 */
+      '.c-ch0-node:hover .c-ch0-dot,.c-ch0-node:focus-visible .c-ch0-dot{transform:scale(1.34);box-shadow:0 0 0 5px color-mix(in srgb,var(--git) 22%,transparent),0 0 18px color-mix(in srgb,var(--git) 55%,transparent);}',
+      '.c-ch0-node:hover .c-ch0-name,.c-ch0-node:focus-visible .c-ch0-name{color:var(--text);transform:translateY(2px);}',
+
+      /* 当前进度高亮（从某章按 Esc 进来时） */
+      '.c-ch0-node.is-current .c-ch0-dot{box-shadow:0 0 0 4px var(--git),0 0 20px color-mix(in srgb,var(--git) 70%,transparent);}',
+      '.c-ch0-node.is-current .c-ch0-name{color:var(--git);font-weight:800;}',
+
+      /* 悬停气泡：一句话简介（不剧透概念） */
+      '.c-ch0-tip{position:absolute;bottom:calc(100% + 16px);left:50%;transform:translate(-50%,8px);',
+      'min-width:9.5em;max-width:15em;white-space:normal;text-align:center;',
+      'background:var(--pane2);border:1px solid var(--border);border-radius:11px;padding:9px 13px;',
+      'font-family:var(--font-quote);font-size:14px;line-height:1.5;color:var(--text);',
+      'opacity:0;pointer-events:none;transition:opacity .2s var(--ease),transform .2s var(--ease);',
+      'box-shadow:0 8px 24px rgba(0,0,0,.45);z-index:5;}',
+      '.c-ch0-tip::after{content:"";position:absolute;top:100%;left:50%;transform:translateX(-50%);',
+      'border:7px solid transparent;border-top-color:var(--pane2);}',
+      '.c-ch0-node:hover .c-ch0-tip,.c-ch0-node:focus-visible .c-ch0-tip{opacity:1;transform:translate(-50%,0);}',
+
+      /* 兜底提示（找不到 __Deck 时） */
+      '.c-ch0-map-note{margin-top:30px;min-height:1.4em;font-size:13px;color:var(--dim);text-align:center;transition:color .25s;}',
+      '.c-ch0-map-note.show{color:var(--c-teal);}',
+
+      /* 滚动条收一点 */
+      '.c-ch0-chain-scroll::-webkit-scrollbar{height:8px;}'
     ].join('');
     document.head.appendChild(s);
   }
 
-  /* 背景漂移用的极淡 commit 图（自绘 SVG，两段拼接以便无缝循环漂移） */
-  function bgCommitSVG() {
-    var seg = '';
-    var n = 14, gap = 84, r = 9, y = 60;
-    for (var i = 0; i < n; i++) {
-      var x = 30 + i * gap;
-      if (i < n - 1) {
-        seg += '<line x1="' + x + '" y1="' + y + '" x2="' + (x + gap) + '" y2="' + y + '" stroke="var(--c-main)" stroke-width="3"/>';
-      }
-      // 偶尔分叉一条淡淡的支线，增加"版本图"质感
-      if (i % 4 === 2) {
-        seg += '<line x1="' + x + '" y1="' + y + '" x2="' + (x + gap) + '" y2="' + (y - 34) + '" stroke="var(--c-teal)" stroke-width="3"/>' +
-               '<circle cx="' + (x + gap) + '" cy="' + (y - 34) + '" r="' + r + '" fill="var(--c-teal)"/>';
-      }
-    }
-    for (var j = 0; j < n; j++) {
-      seg += '<circle cx="' + (30 + j * gap) + '" cy="' + y + '" r="' + r + '" fill="var(--c-main)"/>';
-    }
-    var W = 30 + (n - 1) * gap + 60;
-    // 两份并排 → track 宽度 2W，动画位移 -50% 正好滚过一份，无缝
-    return '<svg class="c-ch0-bg-track" width="' + (W * 2) + '" height="120" viewBox="0 0 ' + (W * 2) + ' 120" aria-hidden="true">' +
-      '<g>' + seg + '</g>' +
-      '<g transform="translate(' + W + ',0)">' + seg + '</g>' +
-      '</svg>';
-  }
+  /* ============================================================
+     封面：漂浮圆点 + 连线粒子 SVG（确定性布局，不随机抖动）
+     两份并排，整组 c-ch0-pdrift 漂移 -260px = 一份宽度 → 无缝循环
+     ============================================================ */
+  function particlesSVG() {
+    // 确定性伪随机（LCG），保证每次渲染布局一致、可循环
+    var seed = 0x2f50f1;
+    function rnd() { seed = (seed * 1103515245 + 12345) & 0x7fffffff; return seed / 0x7fffffff; }
 
-  /* git 官方风格三点橙色 logo（纯 SVG，#F05133） */
-  function gitLogoSVG(size) {
-    var s = size || 110;
-    return '<svg width="' + s + '" height="' + s + '" viewBox="0 0 120 120" aria-hidden="true">' +
-      '<g stroke="var(--git)" stroke-width="6" stroke-linecap="round" fill="var(--git)">' +
-        '<line x1="60" y1="96" x2="60" y2="40"/>' +
-        '<line x1="60" y1="58" x2="92" y2="30"/>' +
-        '<circle cx="60" cy="96" r="11" stroke="none"/>' +
-        '<circle cx="60" cy="40" r="11" stroke="none"/>' +
-        '<circle cx="92" cy="30" r="11" stroke="none"/>' +
-      '</g></svg>';
+    var VW = 260, VH = 360;            // 一份的宽/高（用户坐标）
+    var pts = [];
+    var cols = 5, rows = 6;
+    for (var r = 0; r < rows; r++) {
+      for (var c = 0; c < cols; c++) {
+        var jx = (rnd() - 0.5) * 34;
+        var jy = (rnd() - 0.5) * 34;
+        pts.push({
+          x: 18 + c * (VW / cols) + jx,
+          y: 20 + r * (VH / rows) + jy,
+          rad: rnd() * 1.6 + 1.1,
+          git: rnd() < 0.18,             // 少量 git 橙点缀
+          delay: (rnd() * 6).toFixed(2),
+          dur: (6 + rnd() * 4).toFixed(2)
+        });
+      }
+    }
+
+    function seg(offsetX) {
+      var out = '';
+      // 连线：每个点连向「右侧最近的一个点」，形成稀疏粒子网
+      for (var i = 0; i < pts.length; i++) {
+        var a = pts[i], best = null, bd = 1e9;
+        for (var j = 0; j < pts.length; j++) {
+          if (j === i) continue;
+          var b = pts[j];
+          if (b.x <= a.x) continue;        // 只往右连，避免重复
+          var d = (b.x - a.x) * (b.x - a.x) + (b.y - a.y) * (b.y - a.y);
+          if (d < bd && d < 95 * 95) { bd = d; best = b; }
+        }
+        if (best) {
+          out += '<line class="c-ch0-pline" x1="' + (a.x + offsetX).toFixed(1) + '" y1="' + a.y.toFixed(1) +
+                 '" x2="' + (best.x + offsetX).toFixed(1) + '" y2="' + best.y.toFixed(1) +
+                 '" opacity="' + (0.05 + (1 - bd / (95 * 95)) * 0.12).toFixed(3) + '"/>';
+        }
+      }
+      // 点（每个套一层缓慢上下浮动的 g）
+      for (var k = 0; k < pts.length; k++) {
+        var p = pts[k];
+        out += '<g class="c-ch0-pfloat" style="animation-delay:' + p.delay + 's;animation-duration:' + p.dur + 's;">' +
+                 '<circle class="c-ch0-pdot' + (p.git ? ' git' : '') + '" cx="' + (p.x + offsetX).toFixed(1) +
+                 '" cy="' + p.y.toFixed(1) + '" r="' + p.rad.toFixed(2) +
+                 '" opacity="' + (0.35 + rnd() * 0.4).toFixed(2) + '"/></g>';
+      }
+      return out;
+    }
+
+    var inner = seg(0) + seg(VW);        // 两份并排
+    return '<svg viewBox="0 0 ' + (VW * 2) + ' ' + VH + '" preserveAspectRatio="xMidYMid slice" aria-hidden="true">' +
+             '<g class="c-ch0-pdrift">' + inner + '</g>' +
+           '</svg>';
   }
 
   /* ====================================================== */
   /* 屏 0.1 — 封面                                          */
   /* ====================================================== */
-  window.registerScreen({
+  register({
     chapter: 0,
-    chapterName: '封面 + 总纲',
+    chapterName: '开场',
     id: 'cover',
-    title: 'Git，但是给 Vibe Coder',
-    subtitle: '你不背命令，你理解效果',
+    title: 'Git ＆ GitHub：写给 Vibe Coder 的版本控制',
+    subtitle: '你不背命令，你只理解效果，然后用人话告诉 AI',
     render: function (stage, api) {
       injectStyle();
+
       stage.innerHTML =
         '<div class="c-ch0-cover">' +
-          '<div class="c-ch0-bg">' + bgCommitSVG() + '</div>' +
+          // 极淡裸节点漂移（commit 图主视觉的暗示）
+          '<div class="c-ch0-barebg" id="c-ch0-barebg"><div class="c-ch0-baretrack" id="c-ch0-baretrack"></div></div>' +
+          // 漂浮圆点 + 连线粒子（带鼠标视差）
+          '<div class="c-ch0-particles" id="c-ch0-particles">' + particlesSVG() + '</div>' +
           '<div class="c-ch0-cover-inner">' +
-            '<h1 class="c-ch0-title">Git，<br>但是给 <span class="c-ch0-mono">Vibe&nbsp;Coder</span></h1>' +
-            '<p class="c-ch0-sub">—— 你不背命令，你理解效果 ——</p>' +
-            '<span class="c-ch0-start">〔 按 <span class="c-ch0-key">空格</span> 开始 ▶ 〕</span>' +
+            '<h1 class="c-ch0-title">Git <span class="c-ch0-amp">＆</span> GitHub<br>写给 Vibe Coder 的版本控制</h1>' +
+            '<p class="c-ch0-sub sc-quote">「你不背命令，你只理解<span class="accent">效果</span>，然后用人话告诉 AI。」</p>' +
+            '<span class="c-ch0-start">〔 按 <span class="key">空格</span> 开始 ▶ 〕</span>' +
           '</div>' +
         '</div>';
-      // 封面无分步。背景漂移由纯 CSS 动画驱动（幂等：每次进入重建 DOM，动画自动重跑）。
+
+      // —— 极淡裸节点漂移：用 api.graph 的 bare 模式画一排淡淡的裸节点 ——
+      var bareHost = stage.querySelector('#c-ch0-baretrack');
+      try {
+        var g = api.graph(bareHost, {});
+        g.init('main', ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'], { bare: true });
+      } catch (e) { /* 图失败不影响封面 */ }
+
+      // —— 鼠标视差：粒子层随光标轻微反向位移（一次性监听；重建 DOM 时随节点销毁）——
+      var pl = stage.querySelector('#c-ch0-particles');
+      if (pl && !api.isReplay) {
+        var onMove = function (ev) {
+          var cx = window.innerWidth / 2, cy = window.innerHeight / 2;
+          var dx = (ev.clientX - cx) / cx, dy = (ev.clientY - cy) / cy;
+          pl.style.transform = 'translate(' + (-dx * 18).toFixed(1) + 'px,' + (-dy * 14).toFixed(1) + 'px)';
+        };
+        // 绑到 stage 上，stage 重建即自动失效（旧 stage 内容被清空）
+        stage.addEventListener('mousemove', onMove);
+        // stage 之外也想响应：window 监听 + stage 在文档中才生效；离开本屏 stage 被清空，无副作用
+        window.addEventListener('mousemove', onMove);
+        api.onReset(function () { window.removeEventListener('mousemove', onMove); });
+      }
+      // 封面无分步。所有出现由 CSS 入场动画驱动（幂等：重建 DOM → 动画自动重跑）。
     }
   });
 
   /* ====================================================== */
-  /* 屏 0.2 — 这门课怎么上（主题词 + 视觉图例 + 三层卡）       */
+  /* 屏 0.2 — 章节地图（v2 新顺序；兼 Esc 总览）             */
   /* ====================================================== */
-  window.registerScreen({
+  register({
     chapter: 0,
-    chapterName: '封面 + 总纲',
-    id: 'legend',
-    title: '这门课怎么上',
-    subtitle: '记住效果，把命令交给 AI',
+    chapterName: '开场',
+    id: 'chapter-map',
+    title: '章节地图',
+    subtitle: '这趟旅程会经过哪些站',
     render: function (stage, api) {
       injectStyle();
 
-      // 主题词文本（分段染色：teal 段 / git 段 / 普通段）
-      var mottoParts = [
-        { t: '你不背命令，你只理解', cls: '' },
-        { t: '效果', cls: 'c-ch0-hl' },
-        { t: '，然后用人话告诉 ', cls: '' },
-        { t: 'AI', cls: 'c-ch0-hl2' },
-        { t: '。', cls: '' }
-      ];
-      var fullLen = mottoParts.reduce(function (a, p) { return a + p.t.length; }, 0);
+      // ---- 计算「当前进度」：若从某章按 Esc 进来，高亮对应节点 ----
+      var curChapter = null;
+      try {
+        var D = window.__Deck;
+        if (D && D.screens && typeof D.idx === 'number' && D.screens[D.idx]) {
+          var ch = D.screens[D.idx].chapter;
+          if (ch && ch !== 0) curChapter = ch;   // 0=开场本身，不算进度
+        }
+      } catch (e) {}
+
+      // ---- 组装 chain DOM ----
+      var chainHTML = '';
+      MAP.forEach(function (m, i) {
+        if (i > 0) {
+          // i 之前（含 target<=curChapter 的叙事段）算「已走过」→ 连线点亮
+          chainHTML += '<span class="c-ch0-link" data-link="' + i + '"></span>';
+        }
+        var accent = ACCENT_VAR[m.accent] || ACCENT_VAR.main;
+        chainHTML +=
+          '<button class="c-ch0-node' + (m.end ? ' is-end' : '') + '" type="button" data-interactive="1"' +
+            ' data-i="' + i + '" data-target="' + m.target + '" aria-label="第 ' + m.n + ' 章 ' + m.name + '：' + m.blurb + '">' +
+            '<span class="c-ch0-tip">' + m.blurb + '</span>' +
+            '<span class="c-ch0-dot" style="background:' + accent + ';">' + m.n + '</span>' +
+            '<span class="c-ch0-name">' + m.name + '</span>' +
+          '</button>';
+      });
 
       stage.innerHTML =
-        '<h2 class="sc-h2">这门课怎么上？</h2>' +
-        '<div class="c-ch0-legend-wrap">' +
-          '<div>' +
-            '<div class="c-ch0-motto" id="c-ch0-motto"></div>' +
+        '<div class="c-ch0-map">' +
+          '<div class="c-ch0-map-head">' +
+            '<h2 class="sc-h2">章节地图</h2>' +
+            '<p class="c-ch0-map-sub">点任意节点跳到那一章 · 随时按 <span class="k">Esc</span> 回到这里</p>' +
           '</div>' +
-          '<div class="c-ch0-legend-card">' +
-            '<h3>视觉图例 · 全站符号</h3>' +
-            '<div class="c-ch0-legend-row" id="c-ch0-lg-0">' +
-              '<div class="c-ch0-legend-sym"><span class="c-ch0-sym-commit"></span></div>' +
-              '<div class="c-ch0-legend-txt"><b>● = 一次提交</b> <span class="c-ch0-m">commit</span><br>你按一次"存档键"，就多一个圆点。</div>' +
-            '</div>' +
-            '<div class="c-ch0-legend-row" id="c-ch0-lg-1">' +
-              '<div class="c-ch0-legend-sym"><span class="c-ch0-sym-branch"></span></div>' +
-              '<div class="c-ch0-legend-txt"><b>─── = 一条分支</b> <span class="c-ch0-m">branch</span><br>一条独立的时间线，可以平行往前走。</div>' +
-            '</div>' +
-            '<div class="c-ch0-legend-row" id="c-ch0-lg-2">' +
-              '<div class="c-ch0-legend-sym"><span class="c-ch0-sym-head">🚩</span></div>' +
-              '<div class="c-ch0-legend-txt"><b>🚩 HEAD = 你现在站在哪</b><br>这面小旗指着你当前所处的那个点。</div>' +
-            '</div>' +
-            '<div class="c-ch0-legend-row" id="c-ch0-lg-3">' +
-              '<div class="c-ch0-legend-sym"><span class="c-ch0-sym-astro">👨‍🚀</span></div>' +
-              '<div class="c-ch0-legend-txt"><b>👨‍🚀 = 孤儿 commit</b><br>没人牵着、飘走了的提交，最后会被回收。</div>' +
-            '</div>' +
+          '<div class="c-ch0-chain-scroll">' +
+            '<div class="c-ch0-chain" id="c-ch0-chain">' + chainHTML + '</div>' +
           '</div>' +
-        '</div>' +
-        '<p class="c-ch0-demo-hint" id="c-ch0-demohint">' +
-          '后面每个操作都长这样 👇 <b>效果 → 对 AI 说的话 →（折叠的）真命令</b>。点一下卡片底部，展开看真命令。' +
-        '</p>' +
-        '<div id="c-ch0-aicard-host" style="max-width:560px;margin:0 auto;"></div>';
+          '<div class="c-ch0-map-note" id="c-ch0-map-note"></div>' +
+        '</div>';
 
-      var mottoEl = stage.querySelector('#c-ch0-motto');
+      var note = stage.querySelector('#c-ch0-map-note');
 
-      // —— 把主题词渲染到指定字符数（打字机 / 一次性）——
-      function renderMotto(count, withCaret) {
-        var html = '', left = count;
-        for (var i = 0; i < mottoParts.length; i++) {
-          var p = mottoParts[i];
-          if (left <= 0) break;
-          var take = Math.min(left, p.t.length);
-          var chunk = p.t.slice(0, take);
-          html += p.cls ? '<span class="' + p.cls + '">' + chunk + '</span>' : chunk;
-          left -= take;
+      // ---- 当前进度高亮 + 已走过连线点亮 ----
+      // 高亮规则：节点的 target===curChapter → 标 current；
+      //           叙事上排在「最后一个 current 节点」及之前的连线点亮。
+      var lastCurrentIdx = -1;
+      var nodes = stage.querySelectorAll('.c-ch0-node');
+      if (curChapter != null) {
+        MAP.forEach(function (m, i) {
+          if (m.target === curChapter) {
+            nodes[i].classList.add('is-current');
+            if (i > lastCurrentIdx) lastCurrentIdx = i;
+          }
+        });
+        if (lastCurrentIdx >= 0) {
+          stage.querySelectorAll('.c-ch0-link').forEach(function (lk) {
+            if (+lk.getAttribute('data-link') <= lastCurrentIdx) lk.classList.add('done');
+          });
         }
-        if (withCaret) html += '<span class="c-ch0-caret">|</span>';
-        mottoEl.innerHTML = html;
       }
 
-      // 初始（第 0 步）：主题词留空，等第一步推进
-      renderMotto(0, false);
-
-      // 三层 AI 卡：示意"效果 / 🤖对AI说 / 折叠真命令"
-      var demoCard = api.aiCard({
-        effect: '把项目回退到某个版本',
-        say: '帮我回退到 a1b2c3d',
-        cmd: 'git reset --hard a1b2c3d'
-      });
-      var aiHost = stage.querySelector('#c-ch0-aicard-host');
-      aiHost.appendChild(demoCard);
-
-      // ---------- 分步 ----------
-      // step 1：主题词打字机出现
-      var typingTimer = null;
-      api.step(function (animated) {
-        if (typingTimer) { clearInterval(typingTimer); typingTimer = null; }
-        if (!animated) { renderMotto(fullLen, false); return; } // 后退重放：直接全显，不播动画
-        var n = 0;
-        typingTimer = setInterval(function () {
-          n++;
-          renderMotto(n, n < fullLen);
-          if (n >= fullLen) {
-            clearInterval(typingTimer); typingTimer = null;
-            renderMotto(fullLen, false);
+      // ---- 跳转：遍历 __Deck.screens 找第一个 chapter===target 的屏 ----
+      function jumpTo(target, nodeEl) {
+        var D = window.__Deck;
+        if (D && D.screens && typeof D.go === 'function') {
+          var hit = -1;
+          for (var k = 0; k < D.screens.length; k++) {
+            if (D.screens[k].chapter === target) { hit = k; break; }
           }
-        }, 55);
+          if (hit >= 0) {
+            try { if (typeof D.closeOverview === 'function') D.closeOverview(); } catch (e) {}
+            D.go(hit, 0, true);
+            return true;
+          }
+        }
+        return false;
+      }
+
+      var noteTimer = null;
+      function flashNote(msg) {
+        if (!note) return;
+        note.textContent = msg;
+        note.classList.add('show');
+        if (noteTimer) clearTimeout(noteTimer);
+        noteTimer = setTimeout(function () {
+          note.classList.remove('show');
+        }, 2200);
+      }
+
+      Array.prototype.forEach.call(nodes, function (btn) {
+        btn.addEventListener('click', function (e) {
+          e.stopPropagation();           // 防止落入 deck 的左右翻页点击
+          var target = +btn.getAttribute('data-target');
+          var name = btn.querySelector('.c-ch0-name').textContent;
+          var ok = jumpTo(target, btn);
+          if (!ok) {
+            // 兜底：找不到 __Deck / 对应章 → 高亮该节点 + 轻提示
+            Array.prototype.forEach.call(nodes, function (n) { n.classList.remove('is-current'); });
+            btn.classList.add('is-current');
+            flashNote('「' + name + '」这一章稍后就到 —— 先记住它在地图上的位置 👆');
+          }
+        });
       });
 
-      // step 2~5：四个图例符号依次淡入（api.frag 隐藏并注册淡入）
-      api.frag(stage.querySelector('#c-ch0-lg-0'));
-      api.frag(stage.querySelector('#c-ch0-lg-1'));
-      api.frag(stage.querySelector('#c-ch0-lg-2'));
-      api.frag(stage.querySelector('#c-ch0-lg-3'));
-
-      // step 6：示意卡 + 提示出现，并轻轻提示"点开真命令"
-      api.frag(stage.querySelector('#c-ch0-demohint'));
-      api.frag(aiHost);
+      // 章节地图无分步（它同时承担 Esc 总览，需一进入即全貌可见）。
     }
   });
 
@@ -640,6 +851,8 @@ body{
 
       /* ---------- 屏 1.3 Git 登场 ---------- */
       '.c-ch1-arrive-graph{width:100%;min-height:150px;display:flex;align-items:center;justify-content:center;margin:8px 0 6px;}',
+      '.c-ch1-foreshadow{text-align:center;font-size:14px;color:var(--dim);margin:2px auto 0;max-width:560px;}',
+      '.c-ch1-foreshadow b{color:var(--git);font-weight:700;}',
       '.c-ch1-folder-row{display:flex;align-items:center;justify-content:center;gap:40px;flex-wrap:wrap;margin:18px 0 6px;}',
       '.c-ch1-folder{position:relative;display:flex;flex-direction:column;align-items:center;gap:12px;}',
       '.c-ch1-folder-halo{position:absolute;inset:-22px -26px -30px -26px;border-radius:50%;opacity:0;',
@@ -907,6 +1120,7 @@ body{
         '<div style="text-align:center;margin-bottom:6px;">' + gitLogo() + '</div>' +
         '<h2 class="sc-h2" style="text-align:center;">于是，<span style="color:var(--git)">Git</span> 登场</h2>' +
         '<div class="c-ch1-arrive-graph" id="c-ch1-graph"></div>' +
+        '<p class="c-ch1-foreshadow" id="c-ch1-foreshadow">那一团乱麻，被收束成一排整齐的小圆点。<b>每个点是什么？下一章揭晓 →</b></p>' +
         '<div class="c-ch1-folder-row">' +
           '<div class="c-ch1-folder" id="c-ch1-folder">' +
             '<span class="c-ch1-folder-halo"></span>' +
@@ -928,9 +1142,11 @@ body{
       var def = stage.querySelector('#c-ch1-def');
 
       var g = api.graph(graphHost, {});
-      // 初始（第 0 步）：先呈现一条"还在收束中"的稀疏状态 —— 这里直接给一条 main 雏形，
+      // 初始（第 0 步）：先呈现一条"还在收束中"的稀疏状态。
+      // ⚠ 知识锁：第 1 章还没讲 commit / 分支 / HEAD，这里只用 bare 裸线模式
+      //   画一排朴素圆点作"视觉伏笔"——不出现分支标签，也不出现 HEAD 旗。
       // 真正的"乱麻→直线"由 step 推进时补全节点，达到视觉上的归位对齐。
-      g.init('main', ['A', 'B']);
+      g.init('main', ['A', 'B'], { bare: true });
 
       // 定义句与文件夹标签初始为"未点亮"
       var defFrag = api.frag(def);
@@ -938,10 +1154,11 @@ body{
       // ---------- 分步 ----------
       // step 1：乱麻 → 直线收束（补齐节点，整齐对齐成一排 ●）
       api.step(function (animated) {
-        // 幂等：无论 animated 与否，最终都是同一条整齐 main: A B C D E
+        // 幂等：无论 animated 与否，最终都是同一条整齐裸线 A B C D E
+        // 仍用 bare 模式：只是一排朴素圆点，没有分支标签 / HEAD 旗（那些下一章才讲）。
         g.reset();
-        g.init('main', ['A', 'B', 'C', 'D', 'E']);
-        // animated=true 时引擎自带的 addCommit/init 动画即视为"归位对齐"；
+        g.init('main', ['A', 'B', 'C', 'D', 'E'], { bare: true });
+        // animated=true 时引擎自带的 init 动画即视为"归位对齐"；
         // 这里不依赖额外计时器，保证后退重放也得到同样的最终态。
       });
 
@@ -956,7 +1173,7 @@ body{
       api.onReset(function () {
         folder.classList.remove('c-ch1-blessed');
         g.reset();
-        g.init('main', ['A', 'B']);
+        g.init('main', ['A', 'B'], { bare: true });
       });
     }
   });
@@ -1134,7 +1351,7 @@ body{
   var TL_META = [
     { msg: "初始化项目骨架", date: "周一 09:12", author: "你", hash: "f0a1b2c" },
     { msg: "加上登录页面", date: "周一 15:40", author: "你", hash: "9c3d4e5" },
-    { msg: "接入数据库", date: "周二 11:02", author: "同事 A", hash: "1a2b3c4" },
+    { msg: "接入数据库", date: "周二 11:02", author: "你", hash: "1a2b3c4" },
     { msg: "准备上线，定稿", date: "周三 18:30", author: "你", hash: "d5e6f70" },
     { msg: "改了文案，真最终", date: "周四 10:15", author: "你", hash: "7b8c9d0" },
     { msg: "老板又要改…最后一次", date: "周五 20:48", author: "你", hash: "e1f2a3b" }
@@ -1145,19 +1362,19 @@ body{
     chapterName: CHNAME,
     id: "what-commit",
     title: "什么是 commit",
-    subtitle: "每个 commit ＝ 一次快照 ＝ 一个版本",
+    subtitle: "上一章那一排小圆点——每个点，就是一次 commit",
     render: function (stage, api) {
       injectCSS();
       killStray(".c-ch2-pop");
 
-      stage.appendChild(h("div", "sc-pill", "commit ＝ 版本控制的原子"));
+      stage.appendChild(h("div", "sc-pill", "上一章的小圆点，揭晓了"));
       var hh = h("h1", "sc-h1");
       hh.style.marginTop = "12px";
-      hh.innerHTML = "每个 <span style='color:var(--git)'>commit</span> ＝ 一次快照 ＝ 一个版本";
+      hh.innerHTML = "一次 <span style='color:var(--git)'>commit</span> ＝ 给项目按一次「保存」，存下当前这一版";
       stage.appendChild(hh);
       var lead = h("p", "sc-lead sc-dim");
       lead.style.marginTop = "10px";
-      lead.textContent = "commit 链 ＝ 项目的变迁史，每一版都能回溯。";
+      lead.innerHTML = "就像在 Word 里按 <b style='color:var(--text)'>Ctrl+S</b> 存一版——只不过 Git 会把每一版都好好排成一串，随时翻回去看。";
       stage.appendChild(lead);
 
       /* 时间线 SVG：横向 6 节点 */
@@ -1430,7 +1647,7 @@ body{
           '<div class="txt typing">正在输入…</div>';
         document.body.appendChild(chat);
         void chat.offsetWidth; chat.classList.add("show");
-        var line = "帮我回退到 " + SHORT_HASH;
+        var line = "我说的是 " + SHORT_HASH + " 那一版";
         var i = 0, txtEl = chat.querySelector(".txt");
         clearInterval(aiBtn._iv);
         aiBtn._iv = setInterval(function () {
@@ -1449,16 +1666,18 @@ body{
         }, 4200);
       });
 
-      /* 第 3 步：AI 命令卡——把效果翻成真命令 */
-      var aiCard = api.aiCard({
-        effect: "回到某个历史版本",
-        say: "帮我回退到 " + SHORT_HASH,
-        cmd: "git reset --hard " + SHORT_HASH
-      });
-      aiCard.style.marginTop = "6px";
+      /* 第 3 步：预告卡——hash 是「这次提交的代号」，下一章拿它指认版本
+         ⚠ 知识锁：第 2 章不讲"回退/后悔药"，这里只点明它是个可以报给 AI 的代号，
+            具体能拿它做什么留到下一章揭晓（不出现 reset / 回退 / 分支 等词）。 */
+      var teaser = h("div", "sc-card");
+      teaser.style.marginTop = "6px"; teaser.style.maxWidth = "620px";
+      teaser.innerHTML =
+        '<p class="sc-p"><b style="color:var(--git)">这串代号 ＝ 这次提交的名字。</b><br>' +
+        '记不住没关系——复制下来，或者直接报给 AI，就能精确指认「我说的是<span class="sc-mono">' + esc(SHORT_HASH) + '</span>那一版」。' +
+        '<br><span class="sc-dim">至于拿这个代号还能让 AI 替你做什么，<b style="color:var(--c-purple)">下一章揭晓 →</b></span></p>';
       var holder = h("div"); holder.style.display = "flex"; holder.style.justifyContent = "center";
       holder.style.width = "100%";
-      holder.appendChild(aiCard);
+      holder.appendChild(teaser);
       api.frag(holder);
       box.appendChild(holder);
 
@@ -1509,6 +1728,8 @@ body{
       ".c-ch3-pushlabel{font-family:var(--font-mono);font-size:13px;fill:var(--git);text-anchor:middle;font-weight:700}",
       ".c-ch3-commit{transition:opacity .3s}",
       ".c-ch3-commit circle{stroke:#010409;stroke-width:2}",
+      ".c-ch3-commit-hash{font-family:var(--font-mono);font-size:11px;fill:var(--dim);",
+        "text-anchor:middle;dominant-baseline:hanging;letter-spacing:.02em}",
       ".c-ch3-fly{transition:transform 1s var(--ease)}",
       ".c-ch3-lr-actions{display:flex;gap:12px;justify-content:center;margin-top:18px;flex-wrap:wrap}",
       ".c-ch3-spark{position:fixed;width:7px;height:7px;border-radius:50%;background:var(--git);",
@@ -1657,13 +1878,25 @@ body{
       var pushLbl = s("text", { "class": "c-ch3-pushlabel", x: (pStart + pEnd) / 2, y: pipeY - 20 }); pushLbl.textContent = "push ▶";
       svg.appendChild(pipe); svg.appendChild(arrow); svg.appendChild(pushLbl);
 
-      /* 本地 3 个 commit 节点 */
-      var COLORS = ["var(--git)", "var(--c-amber)", "var(--c-purple)"];
+      /* 本地仓库的提交链 —— bare 裸线模式：
+         ⚠ 知识锁：第 3 章还没讲分支/HEAD，这里所有点统一用 git 橙单色、
+            一条直线串起来，节点下方标短 id，不出现分支标签也不出现 HEAD 旗。 */
+      var BARE = "var(--git)";
+      var HASHES = ["a1b2c3d", "9c3d4e5", "d5e6f70"]; // 与第 2 章风格一致的短 id
       var commits = [];
       var startX = lx + 150, startGap = 56;
+      // 先画连接相邻节点的裸线（在节点下层）
+      var bareLine = s("path", {
+        "class": "c-ch3-bareline",
+        d: "M" + startX + " " + lcy + " L" + (startX + 2 * startGap) + " " + lcy,
+        fill: "none", stroke: BARE, "stroke-width": 3, opacity: ".9"
+      });
+      svg.appendChild(bareLine);
       for (var i = 0; i < 3; i++) {
         var g = s("g", { "class": "c-ch3-commit", transform: "translate(" + (startX + i * startGap) + "," + lcy + ")" });
-        g.appendChild(s("circle", { r: 15, cx: 0, cy: 0, fill: COLORS[i] }));
+        g.appendChild(s("circle", { r: 15, cx: 0, cy: 0, fill: BARE, stroke: "#010409", "stroke-width": 2 }));
+        var hsh = s("text", { "class": "c-ch3-commit-hash", x: 0, y: 30 }); hsh.textContent = HASHES[i];
+        g.appendChild(hsh);
         svg.appendChild(g);
         commits.push({ g: g, lx: startX + i * startGap, rxTarget: rx + 70 + i * startGap });
       }
@@ -1674,6 +1907,10 @@ body{
           var x = moved ? c.rxTarget : c.lx;
           c.g.setAttribute("transform", "translate(" + x + "," + lcy + ")");
         });
+        // 裸线跟随：本地态连本地链，已推送态连云端链
+        var s0 = moved ? commits[0].rxTarget : commits[0].lx;
+        var s2 = moved ? commits[2].rxTarget : commits[2].lx;
+        bareLine.setAttribute("d", "M" + s0 + " " + lcy + " L" + s2 + " " + lcy);
         pipe.classList.toggle("live", !!moved);
         arrow.classList.toggle("live", !!moved);
       }
@@ -1702,7 +1939,7 @@ body{
       var aiCard = api.aiCard({
         effect: "把本地改动同步到云端",
         say: "帮我把代码推到 GitHub 上",
-        cmd: "git push origin main"
+        cmd: "git push"
       });
       aiHolder.appendChild(aiCard);
       api.frag(aiHolder);
@@ -1832,7 +2069,7 @@ body{
       /* 收尾说明 */
       var card = h("div", "sc-card"); card.style.maxWidth = "760px"; card.style.margin = "16px auto 0";
       card.innerHTML = '<p class="sc-p sc-center">每个人都把自己的仓库往同一个 hub 上放，' +
-        "大家就能在同一个地方<b>看见彼此的代码、协作、合并</b>——这就是 GitHub。</p>";
+        "大家就能在同一个地方<b>看见彼此的代码、一起协作</b>——这就是 GitHub。</p>";
       api.frag(card);
       stage.appendChild(card);
 
@@ -1990,6 +2227,922 @@ body{
 })();
 
 </script>
+<!-- sc-undo -->
+<script>
+/* ============================================================
+   sc-undo.js — 第 4 章 · 三颗后悔药（王琦的故事）
+   ------------------------------------------------------------
+   v2 分镜核心新内容：后悔药被提到「分支」之前先讲，
+   只讲【效果】和【场景】，绝不碰原理。用王琦的具体故事讲。
+   只有三颗药：discard / reset / revert。第四颗一个字都不提。
+
+   ⭐ 知识锁（本文件逐字把关，绝对不出现）：
+     分支 / branch / main / HEAD / 指针 / 分离头指针 / 孤儿 /
+     merge / checkout / 快照 / 父节点 / 移动指针 / 工作区 / 暂存区
+   这条线只叫「提交历史 / 提交线」，不叫 main；
+   最新点标「你在这一版」，不叫 HEAD。
+
+   框架由另一 agent 提供，本文件只调用契约：
+     window.registerScreen({ chapter, chapterName, id, title, play?, render })
+     api.step(fn) / api.frag(el) / api.aiCard({effect,say,cmd}) /
+     api.onReset(fn) / api.isReplay
+     g = api.graph(container, opts)
+     g.init('main', ['A','B','C','D'], {bare:true, hashes:true, here:true})
+        —— 裸提交线：无分支标签、无旗帜，每点下方短 hash，最新点标「你在这一版」。
+        ("main" 仅是内部名，bare 模式下不显示，文案里绝不写出来。)
+     g.addCommit('main','E') / g.highlight(id,bool) / g.setGhost(id,bool) /
+     g.getNodeXY(id) / g.reset()
+   所有 render 幂等：每次进入(含后退/resize)都从干净状态重建。
+   class 前缀 c-undo-
+   ============================================================ */
+(function () {
+  'use strict';
+
+  var CH = 4;
+  var CHNAME = '三颗后悔药';
+
+  /* 每个提交点的「短 hash」——你和 AI 指认某一版的通用代号。
+     场景文案里出现的 c3d4e5f / b2c3d4e 就来自这里，保证屏上和「对 AI 说」框里一字不差。 */
+  var HASH = {
+    A: 'a1b2c3d',
+    B: 'b2c3d4e',
+    C: 'c3d4e5f',
+    D: 'd4e5f6a',
+    E: 'e5f6a7b',
+    F: 'f6a7b8c'
+  };
+
+  function register(def) {
+    if (typeof window.registerScreen === 'function') { window.registerScreen(def); }
+    else { (window.__pendingScreens = window.__pendingScreens || []).push(def); }
+  }
+
+  function el(tag, cls, html) {
+    var e = document.createElement(tag);
+    if (cls) e.className = cls;
+    if (html != null) e.innerHTML = html;
+    return e;
+  }
+
+  /* ------------------------------------------------------------
+     一次性注入本章样式
+     ------------------------------------------------------------ */
+  function injectCSS() {
+    if (document.getElementById('c-undo-style')) return;
+    var st = document.createElement('style');
+    st.id = 'c-undo-style';
+    st.textContent = [
+      '.c-undo-wrap{width:100%;display:flex;flex-direction:column;gap:clamp(12px,2vh,20px)}',
+      '.c-undo-head{display:flex;flex-direction:column;gap:8px}',
+      '.c-undo-head .sc-pill{align-self:flex-start}',
+      '.c-undo-lead{max-width:64ch}',
+      '.c-undo-lead b{color:var(--c-teal)}',
+      '.c-undo-lead .wq{color:var(--c-amber);font-weight:800}',     /* 王琦高亮 */
+      '.c-undo-lead .bad{color:var(--git);font-weight:800}',
+      '.c-undo-mono{font-family:var(--font-mono);color:var(--c-teal)}',
+
+      /* 画布卡：裸提交线居中 */
+      '.c-undo-canvas{position:relative;display:flex;align-items:center;justify-content:center;',
+        'min-height:240px;padding:clamp(16px,2.4vw,30px);overflow:visible}',
+      '.c-undo-canvas .cg-wrap{width:100%}',
+
+      /* 自绘的 hash 小标（覆盖在画布上，保证与「对 AI 说」框一字不差） */
+      '.c-undo-haslayer{position:absolute;inset:0;pointer-events:none;z-index:3}',
+      '.c-undo-hcap{position:absolute;transform:translate(-50%,0);font-family:var(--font-mono);',
+        'font-size:11px;font-weight:500;color:var(--dim);letter-spacing:.02em;white-space:nowrap}',
+
+      /* 「你在这一版」纯标记（绝非旗帜，story 用语） */
+      '.c-undo-here{position:absolute;transform:translate(-50%,-100%);z-index:4;',
+        'display:flex;flex-direction:column;align-items:center;gap:2px;pointer-events:none}',
+      '.c-undo-here .lab{background:var(--git);color:#fff;font-family:var(--font-sans);',
+        'font-size:11.5px;font-weight:700;padding:3px 9px;border-radius:6px;white-space:nowrap;',
+        'box-shadow:0 2px 8px rgba(240,81,51,.4)}',
+      '.c-undo-here .stem{width:2.5px;height:14px;background:var(--git)}',
+
+      /* 一团「未提交的乱改」——零散抖动小方块 */
+      '.c-undo-mess{position:absolute;z-index:5;transform:translate(-50%,-50%);',
+        'transition:opacity .4s var(--ease),transform .4s var(--ease)}',
+      '.c-undo-mess.gone{opacity:0;transform:translate(-50%,-50%) scale(.3)}',
+      '.c-undo-blk{position:absolute;width:13px;height:13px;border-radius:3px;',
+        'background:var(--c-amber);opacity:.9;animation:c-undo-jit 1.1s ease-in-out infinite}',
+      '@keyframes c-undo-jit{0%,100%{transform:translate(0,0) rotate(-6deg)}',
+        '50%{transform:translate(2px,-3px) rotate(7deg)}}',
+      '.c-undo-mess .tag{position:absolute;top:-22px;left:50%;transform:translateX(-50%);',
+        'white-space:nowrap;font-size:11px;color:var(--c-amber);font-weight:700;font-family:var(--font-sans)}',
+
+      /* D「干净复位」光效 */
+      '@keyframes c-undo-clean{0%{box-shadow:0 0 0 0 rgba(45,212,191,.6)}',
+        '100%{box-shadow:0 0 0 26px rgba(45,212,191,0)}}',
+      '.c-undo-cleanring{position:absolute;z-index:2;width:34px;height:34px;border-radius:50%;',
+        'transform:translate(-50%,-50%);animation:c-undo-clean .8s var(--ease) forwards;pointer-events:none}',
+
+      /* 操作 + AI 区 */
+      '.c-undo-actions{display:flex;gap:12px;flex-wrap:wrap;justify-content:center;margin-top:4px}',
+      '.c-undo-ai{display:flex;justify-content:center;width:100%}',
+      '.c-undo-ai .aicard{max-width:620px;width:100%}',
+
+      /* 「对你来说」小卡 */
+      '.c-undo-foryou{background:linear-gradient(135deg,rgba(45,212,191,.10),rgba(167,139,250,.08));',
+        'border:1px solid var(--c-teal);border-radius:14px;padding:14px 18px;max-width:620px;',
+        'width:100%;margin:0 auto;line-height:1.6}',
+      '.c-undo-foryou .t{font-weight:800;color:var(--c-teal);margin-bottom:4px;display:block;font-size:14px}',
+      '.c-undo-foryou .p{font-size:14.5px;color:var(--text)}',
+      '.c-undo-foryou .p b{color:var(--c-amber)}',
+
+      /* 自做的「对 AI 说」复制框（屏 4.1 用） */
+      '.c-undo-saybox{display:flex;align-items:center;gap:10px;flex-wrap:wrap;max-width:620px;',
+        'width:100%;margin:0 auto;background:var(--pane);border:1px solid var(--border);',
+        'border-radius:14px;padding:12px 16px}',
+      '.c-undo-saybox .ico{font-size:20px}',
+      '.c-undo-saybox .say{flex:1;min-width:200px;font-size:15px;line-height:1.45}',
+      '.c-undo-saybox .say .h{font-family:var(--font-mono);color:var(--c-teal);font-weight:700}',
+      '.c-undo-saybox .say .pl{color:var(--dim)}',
+      '.c-undo-copy{cursor:pointer;border:1px solid var(--border);background:var(--pane2);',
+        'color:var(--text);font-size:13px;font-weight:600;border-radius:9px;padding:7px 14px;',
+        'transition:background .15s,border-color .15s,color .15s;white-space:nowrap}',
+      '.c-undo-copy:hover{background:#272e3d;border-color:#454d5e}',
+      '.c-undo-copy.ok{color:var(--c-teal);border-color:var(--c-teal)}',
+
+      /* 三栏对比（屏 4.5） */
+      '.c-undo-cmp{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;width:100%;margin-top:4px}',
+      '@media(max-width:820px){.c-undo-cmp{grid-template-columns:1fr}}',
+      '.c-undo-col{background:var(--pane);border:1px solid var(--border);border-radius:16px;',
+        'padding:16px;display:flex;flex-direction:column;gap:10px;cursor:pointer;',
+        'transition:border-color .2s var(--ease),transform .2s var(--ease),background .2s}',
+      '.c-undo-col:hover{transform:translateY(-3px);border-color:#454d5e}',
+      '.c-undo-col.active{border-color:var(--git);box-shadow:0 0 0 1px var(--git) inset,0 0 22px rgba(240,81,51,.18)}',
+      '.c-undo-col h3{font-size:17px;font-weight:800;display:flex;align-items:center;gap:8px}',
+      '.c-undo-col .pill{font-family:var(--font-mono);font-size:12px;font-weight:700;',
+        'padding:2px 8px;border-radius:6px;background:rgba(45,212,191,.14);color:var(--c-teal)}',
+      '.c-undo-col .mini{width:100%;height:96px;border-radius:10px;background:#010409;',
+        'border:1px solid var(--border);position:relative;overflow:hidden}',
+      '.c-undo-col .desc{font-size:13.5px;color:var(--dim);line-height:1.5}',
+      '.c-undo-col .desc b{color:var(--text)}',
+
+      /* 三句口诀行 */
+      '.c-undo-three{display:flex;flex-direction:column;gap:8px;max-width:680px;margin:10px auto 0;width:100%}',
+      '.c-undo-three .row{display:flex;align-items:baseline;gap:10px;font-size:15.5px;line-height:1.5}',
+      '.c-undo-three .k{font-family:var(--font-mono);font-weight:800;color:var(--git);min-width:74px}',
+      '.c-undo-three .v b{color:var(--c-teal)}',
+
+      '.c-undo-quote-wrap{text-align:center;margin:14px auto 0;max-width:760px}',
+
+      /* 轻预告条 */
+      '.c-undo-tease{max-width:720px;width:100%;margin:6px auto 0;background:rgba(167,139,250,.08);',
+        'border:1px dashed var(--c-purple);border-radius:14px;padding:14px 18px;',
+        'color:var(--text);font-size:14.5px;line-height:1.6;text-align:center}',
+      '.c-undo-tease b{color:var(--c-purple)}',
+
+      '.c-undo-foot{display:flex;align-items:center;gap:14px;flex-wrap:wrap;',
+        'border-top:1px solid var(--border);padding-top:12px;margin-top:4px}',
+      '.c-undo-hint{font-size:13px;color:var(--dim)}'
+    ].join('');
+    document.head.appendChild(st);
+  }
+
+  /* ------------------------------------------------------------
+     共用：在裸线上自绘 hash 小标 + 「你在这一版」标记。
+     用 getNodeXY(页面坐标) 反算到画布卡内部坐标，绝对定位覆盖。
+     —— 这样无论框架那侧 hashes/here 是否已画，屏上显示的 hash
+        都与「对 AI 说」框里的字符串一字不差。
+     需在布局稳定后调用（rAF + 轻量重试）。
+     ------------------------------------------------------------ */
+  function decorate(canvas, g, ids, hereId, opts) {
+    opts = opts || {};
+    // 清掉旧覆盖层（幂等）
+    var old = canvas.querySelectorAll('.c-undo-haslayer,.c-undo-here');
+    for (var i = 0; i < old.length; i++) { old[i].parentNode.removeChild(old[i]); }
+
+    var rect = canvas.getBoundingClientRect();
+    if (!rect.width) return; // 还没布局，跳过（resize/replay 会再来）
+
+    var layer = el('div', 'c-undo-haslayer');
+    var placedAny = false;
+
+    ids.forEach(function (id) {
+      var xy = g.getNodeXY(id);
+      if (!xy) return;
+      var lx = xy.x - rect.left;
+      var ly = xy.y - rect.top;
+      placedAny = true;
+
+      // hash 小标：放在节点下方
+      var cap = el('div', 'c-undo-hcap', HASH[id] || id);
+      cap.style.left = lx + 'px';
+      cap.style.top = (ly + 24) + 'px';
+      layer.appendChild(cap);
+    });
+
+    if (!placedAny) return;
+    canvas.appendChild(layer);
+
+    // 「你在这一版」标记
+    if (hereId) {
+      var hxy = g.getNodeXY(hereId);
+      if (hxy) {
+        var here = el('div', 'c-undo-here',
+          '<div class="lab">' + (opts.hereText || '你在这一版') + '</div><div class="stem"></div>');
+        here.style.left = (hxy.x - rect.left) + 'px';
+        here.style.top = (hxy.y - rect.top - 22) + 'px';
+        canvas.appendChild(here);
+      }
+    }
+  }
+
+  /* 布局稳定后再装饰（rAF 两帧 + 一次 80ms 兜底，覆盖首帧 viewBox 还没定的情况） */
+  function decorateSoon(canvas, g, ids, hereId, opts) {
+    function run() { try { decorate(canvas, g, ids, hereId, opts); } catch (e) {} }
+    requestAnimationFrame(function () { requestAnimationFrame(run); });
+    setTimeout(run, 90);
+    setTimeout(run, 260);
+  }
+
+  /* 复制按钮：navigator.clipboard，带降级 */
+  function wireCopy(btn, getText) {
+    btn.addEventListener('click', function (e) {
+      e.stopPropagation();
+      var txt = getText();
+      function done() {
+        var old = btn.textContent;
+        btn.textContent = '✓ 已复制';
+        btn.classList.add('ok');
+        setTimeout(function () { btn.textContent = old; btn.classList.remove('ok'); }, 1400);
+      }
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(txt).then(done, fallback);
+      } else { fallback(); }
+      function fallback() {
+        try {
+          var ta = document.createElement('textarea');
+          ta.value = txt; ta.style.position = 'fixed'; ta.style.opacity = '0';
+          document.body.appendChild(ta); ta.select();
+          document.execCommand('copy'); document.body.removeChild(ta);
+        } catch (err) {}
+        done();
+      }
+    });
+  }
+
+  /* ============================================================
+     屏 4.1 — 你的提交历史就是一条线 + 用 hash 指认版本
+     ============================================================ */
+  register({
+    chapter: CH,
+    chapterName: CHNAME,
+    id: 'undo-line',
+    title: '你的提交历史就是一条线',
+    subtitle: '每个版本都有自己的 hash，用它和 AI 指认',
+    render: function (stage, api) {
+      injectCSS();
+
+      var wrap = el('div', 'c-undo-wrap');
+      stage.appendChild(wrap);
+
+      var head = el('div', 'c-undo-head');
+      head.appendChild(el('span', 'sc-pill', '💊 三颗后悔药'));
+      head.appendChild(el('h2', 'sc-h2',
+        '你的提交历史，就是<span style="color:var(--git)">一条按时间排开的线</span>'));
+      head.appendChild(el('p', 'sc-p c-undo-lead',
+        '到目前为止，你的项目就是这样<b>一条按时间排开的提交线</b>。' +
+        '每个点都是你保存过的一个版本，每个点都有自己的 <span class="c-undo-mono">hash</span>。'));
+      wrap.appendChild(head);
+
+      var canvas = el('div', 'sc-card c-undo-canvas');
+      wrap.appendChild(canvas);
+
+      var g = api.graph(canvas, {});
+      var IDS = ['A', 'B', 'C', 'D'];
+      g.init('main', IDS, { bare: true, hashes: true, here: true });
+
+      // 自绘 hash 小标 + 「你现在在这一版」
+      var hereTxt = '你现在在这一版';
+      decorateSoon(canvas, g, IDS, 'D', { hereText: hereTxt });
+
+      // 自做的「对 AI 说」复制框（随点击更新）
+      var sayBox = el('div', 'c-undo-saybox');
+      sayBox.setAttribute('data-interactive', '1');
+      sayBox.innerHTML =
+        '<span class="ico">🤖</span>' +
+        '<span class="say"><span class="pl">点上面任意一个点，自动生成「指认这一版」的话术 →</span></span>' +
+        '<button class="c-undo-copy" disabled style="opacity:.45;cursor:default">复制</button>';
+      var sayEl = sayBox.querySelector('.say');
+      var copyBtn = sayBox.querySelector('.c-undo-copy');
+      var currentSay = '';
+      wireCopy(copyBtn, function () { return currentSay; });
+      wrap.appendChild(sayBox);
+
+      // 点击任意点 → 高亮它 + 生成话术
+      function pick(id) {
+        IDS.forEach(function (x) { try { g.highlight(x, x === id); } catch (e) {} });
+        // highlight 触发 _render，覆盖层要重画
+        decorateSoon(canvas, g, IDS, 'D', { hereText: hereTxt });
+        var h = HASH[id];
+        currentSay = '我说的是 ' + h + ' 这一版';
+        sayEl.innerHTML = '我说的是 <span class="h">' + h + '</span> 这一版';
+        copyBtn.disabled = false;
+        copyBtn.style.opacity = '1';
+        copyBtn.style.cursor = 'pointer';
+      }
+
+      // 点击命中：用 getNodeXY 反查最近的点
+      canvas.addEventListener('click', function (e) {
+        var rect = canvas.getBoundingClientRect();
+        var px = e.clientX, py = e.clientY;
+        var best = null, bestD = 1e9;
+        IDS.forEach(function (id) {
+          var xy = g.getNodeXY(id);
+          if (!xy) return;
+          var dx = xy.x - px, dy = xy.y - py;
+          var d = dx * dx + dy * dy;
+          if (d < bestD) { bestD = d; best = id; }
+        });
+        if (best && bestD < 44 * 44) {
+          e.stopPropagation(); // 别让点击翻页
+          pick(best);
+        }
+      }, true);
+
+      // 讲解锚点（帧揭示）
+      var anchor = el('div', 'c-undo-foryou');
+      anchor.innerHTML =
+        '<span class="t">📌 记住这一点</span>' +
+        '<span class="p">接下来三颗后悔药，本质都是一句话：' +
+        '<b>「我想回到 / 撤销某一版」</b>。你要做的，就是用 <span style="color:var(--c-teal);font-family:var(--font-mono)">hash</span> ' +
+        '告诉 AI 是哪一版。hash，就是你和 AI 之间指认版本的通用代号。</span>';
+      api.frag(anchor);
+      wrap.appendChild(anchor);
+
+      api.onReset(function () {
+        IDS.forEach(function (x) { try { g.highlight(x, false); } catch (e) {} });
+        currentSay = '';
+        sayEl.innerHTML = '<span class="pl">点上面任意一个点，自动生成「指认这一版」的话术 →</span>';
+        copyBtn.disabled = true; copyBtn.style.opacity = '.45'; copyBtn.style.cursor = 'default';
+        decorateSoon(canvas, g, IDS, 'D', { hereText: hereTxt });
+      });
+    }
+  });
+
+  /* ============================================================
+     屏 4.2 — 后悔药① discard：还没保存的，直接丢
+     ============================================================ */
+  register({
+    chapter: CH,
+    chapterName: CHNAME,
+    id: 'undo-discard',
+    title: '后悔药① discard',
+    subtitle: '还没保存的改动，直接丢掉',
+    play: true,
+    render: function (stage, api) {
+      injectCSS();
+
+      var wrap = el('div', 'c-undo-wrap');
+      stage.appendChild(wrap);
+
+      var head = el('div', 'c-undo-head');
+      head.appendChild(el('span', 'sc-pill', '💊① discard'));
+      head.appendChild(el('h2', 'sc-h2',
+        '后悔药① <span style="color:var(--git)">discard</span>：还没保存的，直接丢'));
+      wrap.appendChild(head);
+
+      // 场景故事
+      var story = el('p', 'sc-p c-undo-lead');
+      story.innerHTML =
+        '你在写一篇活动推文，上一次提交已经基本写完了。这次你打开嘉宾 <span class="wq">王琦</span> 的人物介绍，' +
+        '正准备给他加点幺蛾子——<b class="bad">还没保存提交</b>。结果王琦从背后探头，发现你在憋坏，' +
+        '一把抢过电脑，啪地一个 <span class="c-undo-mono">discard</span>。' +
+        '你这次<b>还没保存的改动，全没了</b>。';
+      wrap.appendChild(story);
+
+      var canvas = el('div', 'sc-card c-undo-canvas');
+      wrap.appendChild(canvas);
+
+      var g = api.graph(canvas, {});
+      var IDS = ['A', 'B', 'C', 'D'];
+      g.init('main', IDS, { bare: true, hashes: true, here: true });
+
+      // 在 D 旁边漂一团「未提交的乱改」
+      var mess = el('div', 'c-undo-mess');
+      mess.innerHTML = '<div class="tag">未保存的乱改</div>';
+      // 5 个抖动小方块，随机错落
+      var POS = [[0, 0], [16, -10], [-14, 6], [10, 14], [-6, -16]];
+      POS.forEach(function (p, i) {
+        var b = el('div', 'c-undo-blk');
+        b.style.left = (p[0]) + 'px';
+        b.style.top = (p[1]) + 'px';
+        b.style.animationDelay = (i * 0.13) + 's';
+        mess.appendChild(b);
+      });
+      canvas.appendChild(mess);
+
+      var IDS_HERE = 'D';
+      function placeMess() {
+        var rect = canvas.getBoundingClientRect();
+        var xy = g.getNodeXY('D');
+        if (rect.width && xy) {
+          mess.style.left = (xy.x - rect.left + 48) + 'px';
+          mess.style.top = (xy.y - rect.top + 4) + 'px';
+        }
+      }
+      function redraw() {
+        decorate(canvas, g, IDS, IDS_HERE, { hereText: '你在这一版' });
+        placeMess();
+      }
+      function redrawSoon() {
+        requestAnimationFrame(function () { requestAnimationFrame(redraw); });
+        setTimeout(redraw, 90); setTimeout(redraw, 260);
+      }
+      redrawSoon();
+
+      var discarded = false;
+      function doDiscard(animated) {
+        discarded = true;
+        if (!animated) { mess.style.transition = 'none'; }
+        mess.classList.add('gone');
+        // D「干净复位」光效
+        if (animated) {
+          var rect = canvas.getBoundingClientRect();
+          var xy = g.getNodeXY('D');
+          if (rect.width && xy) {
+            var ring = el('div', 'c-undo-cleanring');
+            ring.style.left = (xy.x - rect.left) + 'px';
+            ring.style.top = (xy.y - rect.top) + 'px';
+            canvas.appendChild(ring);
+            setTimeout(function () { if (ring.parentNode) ring.parentNode.removeChild(ring); }, 850);
+          }
+        }
+        if (!animated) { void mess.offsetWidth; mess.style.transition = ''; }
+        btn.disabled = true; btn.style.opacity = '.5'; btn.textContent = '✓ 已丢弃，回到干净的这一版';
+      }
+
+      var actions = el('div', 'c-undo-actions');
+      var btn = el('button', 'sc-btn primary', '把还没提交的改动丢弃');
+      btn.setAttribute('data-interactive', '1');
+      btn.addEventListener('click', function (e) { e.stopPropagation(); if (!discarded) { doDiscard(true); } });
+      actions.appendChild(btn);
+      wrap.appendChild(actions);
+
+      // step：键盘流也能演示
+      api.step(function (animated) { doDiscard(animated); });
+
+      // aiCard
+      var aiHolder = el('div', 'c-undo-ai');
+      aiHolder.appendChild(api.aiCard({
+        effect: '把还没提交的改动直接扔掉，回到上一次提交的样子；已提交的历史完全不动',
+        say: '把我没提交的改动全撤了',
+        cmd: 'git restore .'
+      }));
+      api.frag(aiHolder);
+      wrap.appendChild(aiHolder);
+
+      // 「对你来说」小卡
+      var foryou = el('div', 'c-undo-foryou');
+      foryou.innerHTML =
+        '<span class="t">💡 对你来说</span>' +
+        '<span class="p">AI 一通乱改、还<b>没保存提交</b>，把项目改崩了——' +
+        '一键 discard 回到上次能跑的存档，比让它一条条撤又快又稳。</span>';
+      api.frag(foryou);
+      wrap.appendChild(foryou);
+
+      // 强调：历史线一点没动
+      var note = el('div', 'sc-warn-banner');
+      note.style.maxWidth = '620px'; note.style.margin = '0 auto';
+      note.textContent = '注意：那条提交线一个点都没动——丢掉的只是「还没保存」的那团乱改。';
+      api.frag(note);
+      wrap.appendChild(note);
+
+      api.onReset(function () {
+        discarded = false;
+        mess.style.transition = 'none';
+        mess.classList.remove('gone');
+        void mess.offsetWidth; mess.style.transition = '';
+        btn.disabled = false; btn.style.opacity = '1'; btn.textContent = '把还没提交的改动丢弃';
+        redrawSoon();
+      });
+    }
+  });
+
+  /* ============================================================
+     屏 4.3 — 后悔药② reset：已经保存了，整个退回去
+     ============================================================ */
+  register({
+    chapter: CH,
+    chapterName: CHNAME,
+    id: 'undo-reset',
+    title: '后悔药② reset',
+    subtitle: '已经提交了，把项目整个退回某一版',
+    play: true,
+    render: function (stage, api) {
+      injectCSS();
+
+      var wrap = el('div', 'c-undo-wrap');
+      stage.appendChild(wrap);
+
+      var head = el('div', 'c-undo-head');
+      head.appendChild(el('span', 'sc-pill', '💊② reset'));
+      head.appendChild(el('h2', 'sc-h2',
+        '后悔药② <span style="color:var(--git)">reset</span>：已经保存了，整个退回去'));
+      wrap.appendChild(head);
+
+      var story = el('p', 'sc-p c-undo-lead');
+      story.innerHTML =
+        '这次你手快，已经把「上传王琦丑照」这次改动<b class="bad">提交</b>了。' +
+        '<span class="wq">王琦</span>看到，雷霆大怒，直接把你的仓库 <span class="c-undo-mono">reset</span> ' +
+        '到上一张没有丑照的历史版本——丑照那次提交、连同它之后的东西，<b>一起没了</b>。';
+      wrap.appendChild(story);
+
+      var canvas = el('div', 'sc-card c-undo-canvas');
+      wrap.appendChild(canvas);
+
+      var g = api.graph(canvas, {});
+      var FULL = ['A', 'B', 'C', 'D']; // D = 丑照那次
+      var BACK = ['A', 'B', 'C'];      // reset 后
+
+      var reset = false;
+      function build(after, animated) {
+        g.reset();
+        var ids = after ? BACK : FULL;
+        var here = after ? 'C' : 'D';
+        g.init('main', ids, { bare: true, hashes: true, here: true });
+        if (!after) {
+          // 把 D 高亮成「丑照」坏点
+          try { g.highlight('D', true); } catch (e) {}
+        }
+        decorateSoon(canvas, g, ids, here, { hereText: '你在这一版' });
+        return here;
+      }
+      build(false, false);
+
+      var hintBanner = el('div', 'sc-warn-banner');
+      hintBanner.style.maxWidth = '640px'; hintBanner.style.margin = '0 auto';
+      hintBanner.textContent = 'D（丑照那次提交）之后的东西，reset 之后都被丢弃了——线缩回到 C 这一版。';
+      hintBanner.style.display = 'none';
+      wrap.appendChild(hintBanner);
+
+      function doReset(animated) {
+        if (reset) return;
+        reset = true;
+        build(true, animated);
+        hintBanner.style.display = '';
+        btn.disabled = true; btn.style.opacity = '.5'; btn.textContent = '✓ 已退回到 ' + HASH.C + ' 这一版';
+      }
+
+      var actions = el('div', 'c-undo-actions');
+      var btn = el('button', 'sc-btn primary', '把仓库退回到 ' + HASH.C + ' 这一版（没丑照的那张）');
+      btn.setAttribute('data-interactive', '1');
+      btn.addEventListener('click', function (e) { e.stopPropagation(); doReset(true); });
+      actions.appendChild(btn);
+      wrap.appendChild(actions);
+
+      api.step(function (animated) { doReset(animated); });
+
+      var aiHolder = el('div', 'c-undo-ai');
+      aiHolder.appendChild(api.aiCard({
+        effect: '让项目整个退回到某个历史提交的状态，那个点之后的提交都被丢弃',
+        say: '帮我 reset 到 ' + HASH.C + '（没丑照的那一版）',
+        cmd: 'git reset --hard ' + HASH.C
+      }));
+      api.frag(aiHolder);
+      wrap.appendChild(aiHolder);
+
+      var foryou = el('div', 'c-undo-foryou');
+      foryou.innerHTML =
+        '<span class="t">💡 对你来说</span>' +
+        '<span class="p">最近几次提交是死路，想<b>整个放弃、回到能跑的版本</b>——reset 一步到位。' +
+        '记住它的脾气：退回去之后，<b>后面的提交就不要了</b>。</span>';
+      api.frag(foryou);
+      wrap.appendChild(foryou);
+
+      api.onReset(function () {
+        reset = false;
+        build(false, false);
+        hintBanner.style.display = 'none';
+        btn.disabled = false; btn.style.opacity = '1';
+        btn.textContent = '把仓库退回到 ' + HASH.C + ' 这一版（没丑照的那张）';
+      });
+    }
+  });
+
+  /* ============================================================
+     屏 4.4 — 后悔药③ revert：生米煮成熟饭，只挑那一次撤掉
+     ============================================================ */
+  register({
+    chapter: CH,
+    chapterName: CHNAME,
+    id: 'undo-revert',
+    title: '后悔药③ revert',
+    subtitle: '只精准撤掉指定那一次，后面的全留着',
+    play: true,
+    render: function (stage, api) {
+      injectCSS();
+
+      var wrap = el('div', 'c-undo-wrap');
+      stage.appendChild(wrap);
+
+      var head = el('div', 'c-undo-head');
+      head.appendChild(el('span', 'sc-pill', '💊③ revert'));
+      head.appendChild(el('h2', 'sc-h2',
+        '后悔药③ <span style="color:var(--git)">revert</span>：只挑那一次撤掉'));
+      wrap.appendChild(head);
+
+      var story = el('p', 'sc-p c-undo-lead');
+      story.innerHTML =
+        '可这次生米早煮成熟饭了——丑照那次提交（<span class="c-undo-mono">' + HASH.B + '</span>）是<b>很久以前</b>提交的，' +
+        '之后你又写了一大堆新内容、提交了好多次。如果像上次那样 reset 回没丑照的版本，' +
+        '后面那一大段辛苦劳动<b class="bad">全得陪葬</b>。善良的<span class="wq">王琦</span>不忍心，他想：' +
+        '能不能<b>只把那张丑照撤掉，你后面写的全留着</b>？这就是 <span class="c-undo-mono">revert</span>。';
+      wrap.appendChild(story);
+
+      var canvas = el('div', 'sc-card c-undo-canvas');
+      wrap.appendChild(canvas);
+
+      var g = api.graph(canvas, {});
+      var BASE = ['A', 'B', 'C', 'D', 'E']; // B = 丑照（埋中间）；C/D/E = 辛苦劳动
+      var WITH_F = ['A', 'B', 'C', 'D', 'E', 'F']; // F = 反向提交
+
+      var reverted = false;
+      function build(withF, animated) {
+        g.reset();
+        var ids = withF ? WITH_F : BASE;
+        var here = withF ? 'F' : 'E';
+        g.init('main', ids, { bare: true, hashes: true, here: here ? true : true });
+        // 坏点 B 始终高亮
+        try { g.highlight('B', true); } catch (e) {}
+        if (withF) { try { g.highlight('F', true); } catch (e) {} }
+        decorateSoon(canvas, g, ids, here, { hereText: '你在这一版' });
+        return here;
+      }
+      build(false, false);
+
+      // F 的注解（撤掉后出现）
+      var fNote = el('div', 'sc-warn-banner');
+      fNote.style.maxWidth = '700px'; fNote.style.margin = '0 auto';
+      fNote.innerHTML = '末尾新长出的 ' + HASH.F + ' ＝把 ' + HASH.B +
+        ' 的改动反着做一遍，专门抵消那张丑照。B、C、D、E 全保留——历史没删，后面劳动全在，只是末尾多了一次反向提交。';
+      fNote.style.display = 'none';
+      wrap.appendChild(fNote);
+
+      function doRevert(animated) {
+        if (reverted) return;
+        reverted = true;
+        build(true, animated);
+        fNote.style.display = '';
+        btn.disabled = true; btn.style.opacity = '.5'; btn.textContent = '✓ 已撤掉 ' + HASH.B + '（末尾长出抵消点 ' + HASH.F + '）';
+      }
+
+      var actions = el('div', 'c-undo-actions');
+      var btn = el('button', 'sc-btn primary', '只撤掉 ' + HASH.B + ' 这次提交（那张丑照）');
+      btn.setAttribute('data-interactive', '1');
+      btn.addEventListener('click', function (e) { e.stopPropagation(); doRevert(true); });
+      actions.appendChild(btn);
+      wrap.appendChild(actions);
+
+      api.step(function (animated) { doRevert(animated); });
+
+      var aiHolder = el('div', 'c-undo-ai');
+      aiHolder.appendChild(api.aiCard({
+        effect: '不丢后面的提交，在末尾新增一次反向提交，精准抵消掉你指定的那一次提交',
+        say: '帮我 revert 掉 ' + HASH.B + ' 这次提交（那张丑照）',
+        cmd: 'git revert ' + HASH.B
+      }));
+      api.frag(aiHolder);
+      wrap.appendChild(aiHolder);
+
+      var foryou = el('div', 'c-undo-foryou');
+      foryou.innerHTML =
+        '<span class="t">💡 对你来说</span>' +
+        '<span class="p">坏改动早提交了、上面还压着一堆好提交，<b>舍不得 reset</b>——' +
+        'revert 精准拆弹：只拆掉那一颗，上面盖的好东西原封不动。</span>';
+      api.frag(foryou);
+      wrap.appendChild(foryou);
+
+      api.onReset(function () {
+        reverted = false;
+        build(false, false);
+        fNote.style.display = 'none';
+        btn.disabled = false; btn.style.opacity = '1';
+        btn.textContent = '只撤掉 ' + HASH.B + ' 这次提交（那张丑照）';
+      });
+    }
+  });
+
+  /* ============================================================
+     屏 4.5 — 三颗药一图对比 + 口诀 + 轻预告
+     ============================================================ */
+  register({
+    chapter: CH,
+    chapterName: CHNAME,
+    id: 'undo-compare',
+    title: '三颗药一图对比',
+    subtitle: 'discard / reset / revert · 一句话口诀',
+    render: function (stage, api) {
+      injectCSS();
+
+      var wrap = el('div', 'c-undo-wrap');
+      stage.appendChild(wrap);
+
+      var head = el('div', 'c-undo-head');
+      head.appendChild(el('span', 'sc-pill', '🎯 三颗药对比'));
+      head.appendChild(el('h2', 'sc-h2',
+        '三颗后悔药，<span style="color:var(--git)">一图看懂</span>'));
+      head.appendChild(el('p', 'sc-p c-undo-lead',
+        '同一条 <span class="c-undo-mono">A—B—C—D</span> 提交线，三颗药各做各的事。点卡片看它怎么动。'));
+      wrap.appendChild(head);
+
+      /* ---- 三栏 mini SVG 对比 ---- */
+      var SVGNS = 'http://www.w3.org/2000/svg';
+      function svg(name, attrs) {
+        var e = document.createElementNS(SVGNS, name);
+        if (attrs) for (var k in attrs) e.setAttribute(k, attrs[k]);
+        return e;
+      }
+      // mini 画一条 A B C D 线（4 点），返回 {svg, nodeX, y, append}
+      function miniLine(host, n) {
+        n = n || 4;
+        var W = 240, H = 96;
+        var s = svg('svg', { viewBox: '0 0 ' + W + ' ' + H, width: '100%', height: '100%' });
+        var y = 56, x0 = 30, gap = 50;
+        // 连线
+        var line = svg('line', { x1: x0, y1: y, x2: x0 + (n - 1) * gap, y2: y, stroke: 'var(--border)', 'stroke-width': 3 });
+        s.appendChild(line);
+        var xs = [];
+        for (var i = 0; i < n; i++) {
+          var cx = x0 + i * gap; xs.push(cx);
+          var c = svg('circle', { cx: cx, cy: y, r: 11, fill: 'var(--c-main)', stroke: '#010409', 'stroke-width': 2 });
+          c.setAttribute('data-i', i);
+          s.appendChild(c);
+        }
+        host.appendChild(s);
+        return { s: s, line: line, xs: xs, y: y, W: W, H: H, x0: x0, gap: gap };
+      }
+
+      var cmp = el('div', 'c-undo-cmp');
+      wrap.appendChild(cmp);
+
+      var COLS = [
+        {
+          key: 'discard', icon: '💊①', name: 'discard', pill: '丢没保存的',
+          desc: '旁边那团<b>没保存</b>的改动被丢掉，<b>提交线一点不变</b>。'
+        },
+        {
+          key: 'reset', icon: '💊②', name: 'reset', pill: '整个退回',
+          desc: '线<b>缩回历史点</b>，后面的点<b>消失</b>。'
+        },
+        {
+          key: 'revert', icon: '💊③', name: 'revert', pill: '末尾加抵消点',
+          desc: '线末尾<b>多一个抵消点</b>，前面的全<b>保留</b>。'
+        }
+      ];
+
+      var colObjs = [];
+      COLS.forEach(function (c) {
+        var col = el('div', 'c-undo-col');
+        col.setAttribute('data-interactive', '1');
+        col.innerHTML =
+          '<h3>' + c.icon + ' <span style="color:var(--git)">' + c.name + '</span> ' +
+          '<span class="pill">' + c.pill + '</span></h3>';
+        var mini = el('div', 'mini');
+        col.appendChild(mini);
+        col.appendChild(el('div', 'desc', c.desc));
+        cmp.appendChild(col);
+
+        var L = miniLine(mini, 4);
+
+        // 各栏专属装饰元素
+        var extra = {};
+        if (c.key === 'discard') {
+          // D 旁一团没保存的小方块
+          var m = el('div');
+          m.style.position = 'absolute';
+          m.style.zIndex = '2';
+          m.style.left = '0'; m.style.top = '0';
+          mini.appendChild(m);
+          extra.mess = m;
+        }
+
+        colObjs.push({ def: c, col: col, mini: mini, L: L, extra: extra });
+      });
+
+      // 把一栏「演示」一遍（点击或自动）
+      function playCol(o, on) {
+        var L = o.L, key = o.def.key;
+        // 先复位
+        // 复位：重画 4 点线
+        resetCol(o);
+        if (!on) return;
+        if (key === 'discard') {
+          // 画一团乱改在 D 右侧，然后淡掉
+          var rect = o.mini.getBoundingClientRect();
+          var dot = L.xs[3], scale = rect.width ? rect.width / L.W : 1;
+          var mx = (dot + 16) * scale, my = L.y * scale;
+          var blkWrap = el('div');
+          blkWrap.style.position = 'absolute';
+          blkWrap.style.left = mx + 'px'; blkWrap.style.top = my + 'px';
+          blkWrap.style.transition = 'opacity .5s var(--ease),transform .5s var(--ease)';
+          for (var i = 0; i < 3; i++) {
+            var b = el('div', 'c-undo-blk');
+            b.style.left = (i * 5 - 5) + 'px'; b.style.top = (i % 2 ? -6 : 4) + 'px';
+            b.style.animationDelay = (i * 0.12) + 's';
+            blkWrap.appendChild(b);
+          }
+          o.mini.appendChild(blkWrap);
+          setTimeout(function () {
+            blkWrap.style.opacity = '0'; blkWrap.style.transform = 'scale(.3)';
+          }, 420);
+          setTimeout(function () { if (blkWrap.parentNode) blkWrap.parentNode.removeChild(blkWrap); }, 1000);
+        } else if (key === 'reset') {
+          // D 点淡出 + 线缩短
+          var nodes = o.L.s.querySelectorAll('circle');
+          var dNode = nodes[3];
+          dNode.style.transition = 'opacity .5s var(--ease),transform .5s var(--ease)';
+          dNode.style.transformOrigin = 'center';
+          requestAnimationFrame(function () {
+            dNode.style.opacity = '0';
+            dNode.style.transform = 'scale(.2) translateX(-14px)';
+          });
+          o.L.line.style.transition = 'all .5s var(--ease)';
+          o.L.line.setAttribute('x2', o.L.xs[2]);
+        } else if (key === 'revert') {
+          // 末尾长出第 5 点 F（git 橙），高亮
+          var f = svg('circle', { cx: o.L.xs[3] + o.L.gap, cy: o.L.y, r: 11, fill: 'var(--git)', stroke: '#010409', 'stroke-width': 2 });
+          f.style.opacity = '0';
+          f.style.transition = 'opacity .5s var(--ease)';
+          var fl = svg('line', { x1: o.L.xs[3], y1: o.L.y, x2: o.L.xs[3] + o.L.gap, y2: o.L.y, stroke: 'var(--git)', 'stroke-width': 3 });
+          fl.style.opacity = '0'; fl.style.transition = 'opacity .5s var(--ease)';
+          o.L.s.appendChild(fl); o.L.s.appendChild(f);
+          // 扩展 viewBox 容下第 5 点
+          o.L.s.setAttribute('viewBox', '0 0 ' + (o.L.x0 + 4 * o.L.gap + 20) + ' ' + o.L.H);
+          requestAnimationFrame(function () { f.style.opacity = '1'; fl.style.opacity = '1'; });
+        }
+      }
+
+      function resetCol(o) {
+        // 删除附加元素，重画基础线
+        var adds = o.mini.querySelectorAll('div:not(.mini)');
+        // 重建 mini 内容最简单：清空再画
+        o.mini.innerHTML = '';
+        o.L = miniLine(o.mini, 4);
+      }
+
+      var activeKey = null;
+      colObjs.forEach(function (o) {
+        o.col.addEventListener('click', function (e) {
+          e.stopPropagation();
+          // 切换：本栏激活并播放，其余复位
+          colObjs.forEach(function (x) {
+            x.col.classList.toggle('active', x === o);
+            if (x !== o) resetCol(x);
+          });
+          activeKey = o.def.key;
+          playCol(o, true);
+        });
+      });
+
+      // step：依次自动演示三栏
+      api.step(function (animated) { colObjs[0].col.classList.add('active'); playCol(colObjs[0], animated); });
+      api.step(function (animated) {
+        colObjs[0].col.classList.remove('active'); resetCol(colObjs[0]);
+        colObjs[1].col.classList.add('active'); playCol(colObjs[1], animated);
+      });
+      api.step(function (animated) {
+        colObjs[1].col.classList.remove('active'); resetCol(colObjs[1]);
+        colObjs[2].col.classList.add('active'); playCol(colObjs[2], animated);
+      });
+
+      /* ---- 三句话 ---- */
+      var three = el('div', 'c-undo-three');
+      three.innerHTML =
+        '<div class="row"><span class="k">discard</span><span class="v">丢「<b>没保存的</b>」。</span></div>' +
+        '<div class="row"><span class="k">reset</span><span class="v">「<b>整个退回、后面不要了</b>」。</span></div>' +
+        '<div class="row"><span class="k">revert</span><span class="v">「<b>留着后面、只撤指定那次</b>」。</span></div>';
+      api.frag(three);
+      wrap.appendChild(three);
+
+      /* ---- 口诀（文楷金句） ---- */
+      var qw = el('div', 'c-undo-quote-wrap');
+      qw.innerHTML =
+        '<div class="sc-quote big">你不用记它们底层怎么实现，<br>' +
+        '你只要说清<span class="accent">『我想要的效果』</span>，AI 就能帮你做。</div>';
+      api.frag(qw);
+      wrap.appendChild(qw);
+
+      /* ---- 轻预告（只签路标、不剧透） ---- */
+      var tease = el('div', 'c-undo-tease');
+      tease.innerHTML =
+        '这三颗药背后的门道——比如 <b>reset</b> 「丢掉」的提交是不是真的没了——' +
+        '还有传说中的<b>第四颗药</b>，等我们讲完核心概念再回来揭晓 👀';
+      api.frag(tease);
+      wrap.appendChild(tease);
+
+      api.onReset(function () {
+        activeKey = null;
+        colObjs.forEach(function (o) { o.col.classList.remove('active'); resetCol(o); });
+      });
+    }
+  });
+
+})();
+
+</script>
 <!-- sc-ch4 -->
 <script>
 /* ============================================================
@@ -2017,8 +3170,8 @@ body{
   }
 
   register({
-    chapter: 4,
-    chapterName: 'Branch + Merge',
+    chapter: 5,
+    chapterName: '分支 Branch',
     id: 'ch4-branch-merge',
     title: '分支与合并',
     subtitle: '开线 → 并行 → 合回主干',
@@ -2319,7 +3472,7 @@ body{
 <!-- sc-ch5 -->
 <script>
 /* ============================================================
- * 第 5 章 · HEAD 与指针  (chapter:5, play:true)
+ * 第 5 章 · HEAD 与指针  (chapter:6, play:true)
  * 屏 5.1 head-what     · HEAD 是什么（HEAD🚩 稳插 D，可拖拽提示）
  * 屏 5.2 detached      · 分离头指针（拖 / 按钮把 HEAD 移到 B → 冷色 + 警告带）
  * 屏 5.3 orphan        · 孤儿 commit / 宇航员（分离态提交 → 飘走 → 救回来）
@@ -2415,8 +3568,8 @@ body{
   /* 屏 5.1 — HEAD 是什么                                    */
   /* ====================================================== */
   window.registerScreen({
-    chapter: 5,
-    chapterName: 'HEAD 与指针',
+    chapter: 6,
+    chapterName: '指针与 HEAD',
     id: 'head-what',
     title: 'HEAD 是什么',
     subtitle: '你现在站在哪',
@@ -2460,8 +3613,8 @@ body{
   /* 屏 5.2 — 分离头指针                                     */
   /* ====================================================== */
   window.registerScreen({
-    chapter: 5,
-    chapterName: 'HEAD 与指针',
+    chapter: 6,
+    chapterName: '指针与 HEAD',
     id: 'detached',
     title: '分离头指针',
     subtitle: 'detached HEAD',
@@ -2535,8 +3688,8 @@ body{
   /* 屏 5.3 — 孤儿 commit / 宇航员                            */
   /* ====================================================== */
   window.registerScreen({
-    chapter: 5,
-    chapterName: 'HEAD 与指针',
+    chapter: 6,
+    chapterName: '指针与 HEAD',
     id: 'orphan',
     title: '孤儿 commit',
     subtitle: '飘走的宇航员',
@@ -2630,8 +3783,8 @@ body{
   /* 屏 5.4 — 洞察小结                                        */
   /* ====================================================== */
   window.registerScreen({
-    chapter: 5,
-    chapterName: 'HEAD 与指针',
+    chapter: 6,
+    chapterName: '指针与 HEAD',
     id: 'head-insight',
     title: '洞察小结',
     subtitle: '只看 vs 留住',
@@ -2716,7 +3869,7 @@ body{
 <!-- sc-ch6 -->
 <script>
 /* ============================================================
- * 第 6 章 · 三颗后悔药（去重合并）  (chapter:6, play:true)
+ * 第 6 章 · 三颗后悔药（去重合并）  (chapter:7, play:true)
  * 把 discard / reset / revert / checkout 统一成「按你想撤销什么来选药」。
  * 屏 6.1 triage     · 分诊台（四入口决策卡 → 跳对应屏）
  * 屏 6.2 discard    · 丢掉未提交改动
@@ -2820,8 +3973,8 @@ body{
   /* 屏 6.1 — 分诊台                                         */
   /* ====================================================== */
   window.registerScreen({
-    chapter: 6,
-    chapterName: '三颗后悔药',
+    chapter: 7,
+    chapterName: '回到后悔药·原理与第四颗药',
     id: 'triage',
     title: '分诊台',
     subtitle: '按你想撤销什么来选药',
@@ -2888,8 +4041,8 @@ body{
   /* 屏 6.2 — discard                                        */
   /* ====================================================== */
   window.registerScreen({
-    chapter: 6,
-    chapterName: '三颗后悔药',
+    chapter: 7,
+    chapterName: '回到后悔药·原理与第四颗药',
     id: 'discard',
     title: 'discard · 丢掉未提交改动',
     subtitle: '回到上次 commit 的干净态',
@@ -2981,8 +4134,8 @@ body{
   /* 屏 6.3 — reset --hard                                   */
   /* ====================================================== */
   window.registerScreen({
-    chapter: 6,
-    chapterName: '三颗后悔药',
+    chapter: 7,
+    chapterName: '回到后悔药·原理与第四颗药',
     id: 'reset',
     title: 'reset --hard · 分支整段退回',
     subtitle: '最暴力 · 会重写历史',
@@ -3056,8 +4209,8 @@ body{
   /* 屏 6.4 — revert                                         */
   /* ====================================================== */
   window.registerScreen({
-    chapter: 6,
-    chapterName: '三颗后悔药',
+    chapter: 7,
+    chapterName: '回到后悔药·原理与第四颗药',
     id: 'revert',
     title: 'revert · 新建提交抵消',
     subtitle: '历史全保留 · push 过也安全',
@@ -3124,8 +4277,8 @@ body{
   /* 屏 6.5 — checkout（只是去看看）                          */
   /* ====================================================== */
   window.registerScreen({
-    chapter: 6,
-    chapterName: '三颗后悔药',
+    chapter: 7,
+    chapterName: '回到后悔药·原理与第四颗药',
     id: 'checkout',
     title: 'checkout · 只是去看看',
     subtitle: '分离头指针 · 分支不动',
@@ -3190,8 +4343,8 @@ body{
   /* 屏 6.6 — 四味药对照表                                    */
   /* ====================================================== */
   window.registerScreen({
-    chapter: 6,
-    chapterName: '三颗后悔药',
+    chapter: 7,
+    chapterName: '回到后悔药·原理与第四颗药',
     id: 'undo-table',
     title: '四味药对照表',
     subtitle: '一张表收尾',
@@ -3387,7 +4540,7 @@ body{
   /* 屏 7.1 — 比较两次提交                                   */
   /* ====================================================== */
   window.registerScreen({
-    chapter: 7,
+    chapter: 8,
     chapterName: 'git diff',
     id: 'diff',
     title: '比较两次提交',
@@ -3781,7 +4934,7 @@ body{
   /* 屏 8.1 — 别直接在 main 上改                            */
   /* ====================================================== */
   window.registerScreen({
-    chapter: 8,
+    chapter: 9,
     chapterName: '多人协作',
     id: 'no-main',
     title: '别直接在 main 上改',
@@ -3979,7 +5132,7 @@ body{
   /* 屏 8.2 — fork → PR → review → merge                    */
   /* ====================================================== */
   window.registerScreen({
-    chapter: 8,
+    chapter: 9,
     chapterName: '多人协作',
     id: 'pr-flow',
     title: 'fork → PR → review',
@@ -4062,7 +5215,7 @@ body{
   /* 屏 8.3 — merge conflict（人来拍板）                     */
   /* ====================================================== */
   window.registerScreen({
-    chapter: 8,
+    chapter: 9,
     chapterName: '多人协作',
     id: 'conflict',
     title: 'merge conflict',
@@ -4174,7 +5327,7 @@ body{
   /* 屏 8.4 — cherry-pick（只拣一个 commit）                 */
   /* ====================================================== */
   window.registerScreen({
-    chapter: 8,
+    chapter: 9,
     chapterName: '多人协作',
     id: 'cherry-pick',
     title: 'cherry-pick',
@@ -4485,7 +5638,7 @@ body{
   /* 屏 9.1 — 什么是 worktree                               */
   /* ====================================================== */
   register({
-    chapter: 9,
+    chapter: 10,
     chapterName: 'Worktree（进阶/彩蛋）',
     id: 'worktree-what',
     title: '什么是 worktree',
@@ -4600,7 +5753,7 @@ body{
   /* 屏 9.2 — 不是平行宇宙，是投影                          */
   /* ====================================================== */
   register({
-    chapter: 9,
+    chapter: 10,
     chapterName: 'Worktree（进阶/彩蛋）',
     id: 'worktree-projection',
     title: '不是平行宇宙，是投影',
@@ -4717,7 +5870,7 @@ body{
   /* 屏 9.3 — Q&A：触摸 git 本质（悬念式 reveal）           */
   /* ====================================================== */
   register({
-    chapter: 9,
+    chapter: 10,
     chapterName: 'Worktree（进阶/彩蛋）',
     id: 'worktree-qa',
     title: 'Q&A：触摸 git 本质',
@@ -4804,7 +5957,7 @@ body{
   /* 屏 9.4 — Vibe coder 的杀手级用法（3 个 agent 并行）     */
   /* ====================================================== */
   register({
-    chapter: 9,
+    chapter: 10,
     chapterName: 'Worktree（进阶/彩蛋）',
     id: 'worktree-killer',
     title: 'Vibe coder 的杀手级用法',
@@ -5027,7 +6180,7 @@ body{
   }
 
   register({
-    chapter: 10,
+    chapter: 11,
     chapterName: '结语',
     id: 'ending',
     title: '你已经会用 Git 了',
@@ -5080,12 +6233,7 @@ body{
 })();
 
 </script>
-<script>
-document.addEventListener('click', function(e){
-  var b = e.target && e.target.closest && e.target.closest('[data-bridge="github"]');
-  if (b) { e.preventDefault(); window.location.href = 'github-tutorial.html'; }
-}, true);
-</script>
+<script>document.addEventListener('click',function(e){var b=e.target&&e.target.closest&&e.target.closest('[data-bridge="github"]');if(b){e.preventDefault();window.location.href='github-tutorial.html';}},true);</script>
 
 <!-- ===== ENGINE ===== -->
 <script>
@@ -5120,8 +6268,10 @@ function el(tag, cls, txt){
 }
 
 var BRANCH_COLORS = {
-  main:'#E6EDF3', teal:'#2DD4BF', purple:'#A78BFA', amber:'#FBBF24', pink:'#F472B6'
+  main:'#E6EDF3', teal:'#39D0D8', purple:'#A78BFA', amber:'#FBBF24', pink:'#FF4D9D'
 };
+// bare ("裸线") mode: every node shares one colour — git orange.
+var BARE_COLOR = '#F1502F';
 // dark dot colors that need a light text label
 function needsDarkLabel(hex){
   // returns true if label text should be dark (because dot is light)
@@ -5130,6 +6280,22 @@ function needsDarkLabel(hex){
   var r=parseInt(c.substr(0,2),16),g=parseInt(c.substr(2,2),16),b=parseInt(c.substr(4,2),16);
   var lum=(0.299*r+0.587*g+0.114*b);
   return lum>150; // light dot -> dark label
+}
+
+// deterministic 7-char short hash from an arbitrary string (FNV-1a -> hex).
+// Stable across replays/back-stepping; never random.
+function shortHash(str){
+  str = String(str==null?'':str);
+  var h = 0x811c9dc5; // FNV offset basis
+  for(var i=0;i<str.length;i++){
+    h ^= str.charCodeAt(i);
+    h = (h + ((h<<1)+(h<<4)+(h<<7)+(h<<8)+(h<<24))) >>> 0; // *16777619 mod 2^32
+  }
+  // mix once more so single-char labels (A,B,C…) diverge nicely
+  h = (h ^ (h>>>15)) >>> 0;
+  var hex = h.toString(16);
+  while(hex.length<7) hex = '0'+hex;        // pad
+  return hex.substr(0,7);                    // exactly 7 chars
 }
 
 /* ============================================================
@@ -5165,6 +6331,10 @@ CommitGraph.prototype._reset = function(){
   this.laneCount = 0;
   this.head = {type:'branch', ref:null}; // {type:'branch'|'commit', ref}
   this.detached = false;
+  // ---- bare ("裸线") mode state ----
+  this.bare = false;     // true => no branch pills, no HEAD flag, single colour, flat line
+  this.showHashes = false;
+  this.hereId = null;    // commit id wearing the plain "你在这" marker (not HEAD)
   this.gEdges.innerHTML='';
   this.gNodes.innerHTML='';
   this.gLabels.innerHTML='';
@@ -5185,17 +6355,57 @@ CommitGraph.prototype._animate = function(want){
   return want !== false;
 };
 
-/* ---- public: init a branch with N commits in a row ---- */
-CommitGraph.prototype.init = function(branchName, ids){
-  var color = BRANCH_COLORS[branchName] || BRANCH_COLORS.main;
+/* ---- public: init a branch with N commits in a row ----
+   opts (optional):
+     bare:true    -> 裸线模式: no branch pills, no HEAD flag, single colour, flat line
+     hashes:true  -> print a deterministic 7-char short hash under each node
+     here:true    -> mark the LAST node with the plain "你在这" marker
+   `ids` may be plain labels ['A','B'] OR objects [{label:'A',hash:'abc1234'}].
+*/
+CommitGraph.prototype.init = function(branchName, ids, opts){
+  opts = opts || {};
+  this.bare = !!opts.bare;
+  this.showHashes = !!opts.hashes;
+
+  // 知识锁：bare 裸线模式下，分离态警告条(含 "HEAD" 字样)绝不能出现在 DOM 里——
+  // 前 4 章还没讲 HEAD/分离态。彻底清空文字 + 移出布局；完整模式恢复。
+  if(this.banner){
+    if(this.bare){ this.banner.style.display='none'; this.banner.textContent=''; this.banner.classList.remove('show'); }
+    else { this.banner.style.display=''; if(!this.banner.textContent){ this.banner.textContent='⚠ HEAD 处于分离态 (detached HEAD) — 此处的提交无分支收留'; } }
+  }
+
+  // bare mode: one unified colour (git orange) for every node; otherwise per-branch
+  var color = this.bare ? (opts.color || BARE_COLOR)
+                        : (BRANCH_COLORS[branchName] || BRANCH_COLORS.main);
   var lane = this.laneCount++;
   this.branches[branchName] = {name:branchName, color:color, lane:lane, head:null};
   this.head = {type:'branch', ref:branchName};
-  var self=this;
-  ids.forEach(function(id, i){
-    self._createCommit(id, branchName, (i===0?[]:[ids[i-1]]), {anim:false});
+
+  var self=this, prevId=null;
+  ids.forEach(function(item, i){
+    var id, hash;
+    if(item && typeof item==='object'){ id=item.label; hash=item.hash; }
+    else { id=item; }
+    var c=self._createCommit(id, branchName, (prevId!=null?[prevId]:[]), {anim:false});
+    if(hash!=null) c.hash=hash;          // explicit hash from object form wins
+    prevId=id;
   });
+
+  if(opts.here && ids.length){
+    var last=ids[ids.length-1];
+    this.hereId = (last && typeof last==='object') ? last.label : last;
+  }
+
   this._render(false);
+  return this;
+};
+
+/* ---- public: place the plain "你在这" marker on a node (bare mode) ---- */
+CommitGraph.prototype.markHere = function(id){
+  // accept null/false to clear
+  if(id==null || id===false){ this.hereId=null; }
+  else if(this.commits[id]){ this.hereId=id; }
+  this._render(true);
   return this;
 };
 
@@ -5340,7 +6550,8 @@ CommitGraph.prototype._render = function(animate){
   this.order.forEach(function(cid){var c=self.commits[cid];
     if(c.index>maxIdx)maxIdx=c.index; if(c.lane>maxLane)maxLane=c.lane;});
   Object.keys(this.branches).forEach(function(bn){var b=self.branches[bn];if(b.lane>maxLane)maxLane=b.lane;});
-  var W=this._colX(maxIdx)+160; // room for pills
+  // full mode leaves room on the right for branch pills; bare mode trims to the line
+  var W=this._colX(maxIdx)+(this.bare?70:160);
   var H=this._laneY(maxLane)+90;
   this.svg.setAttribute('viewBox','0 0 '+Math.max(W,300)+' '+Math.max(H,200));
 
@@ -5386,14 +6597,21 @@ CommitGraph.prototype._render = function(animate){
     var label = c.label || cid;
     var t=svgEl('text',{'class':'label'}); t.textContent=label.length>3?label.substr(0,3):label;
     g.appendChild(t);
+    // bare-mode: short hash printed under the node
+    if(self.showHashes){
+      var hsh = c.hash || shortHash(cid);
+      var ht=svgEl('text',{'class':'cg-hash','x':0,'y':26}); ht.textContent=hsh;
+      g.appendChild(ht);
+    }
     if(c._new && animate){ g.classList.add('appear'); c._new=false; }
     else { c._new=false; }
     c._gx=x; c._gy=y;
     self.gNodes.appendChild(g);
   });
 
-  // ---- BRANCH PILLS ----
+  // ---- BRANCH PILLS ----  (skipped entirely in bare mode)
   this.gLabels.innerHTML='';
+  if(!this.bare){
   Object.keys(this.branches).forEach(function(bn){
     var b=self.branches[bn];
     var hc=self.commits[b.head];
@@ -5411,9 +6629,32 @@ CommitGraph.prototype._render = function(animate){
     g.appendChild(rect); g.appendChild(txt);
     self.gLabels.appendChild(g);
   });
+  }
 
   // ---- HEAD FLAG ----
   this.gHead.innerHTML='';
+  if(this.bare){
+    // ---- bare mode: NO HEAD flag ever. Optional plain "你在这" marker. ----
+    var hereC = this.hereId ? this.commits[this.hereId] : null;
+    if(hereC){
+      var ex=this._colX(hereC.index), ey=this._laneY(hereC.lane);
+      var eg=svgEl('g',{'class':'cg-here'});
+      var label='你在这一版';
+      var ew=label.length*12.5+18;          // CJK glyphs are wide
+      var flagY=ey-60;
+      // little stem + dot, plain pointer (deliberately NOT the HEAD flag style)
+      var stem=svgEl('line',{'class':'stem','x1':ex,'y1':ey-17,'x2':ex,'y2':flagY+22});
+      eg.appendChild(stem);
+      var dot=svgEl('circle',{'class':'dot','cx':ex,'cy':flagY+22,'r':3});
+      eg.appendChild(dot);
+      var rect=svgEl('rect',{'x':ex-ew/2,'y':flagY,'width':ew,'height':24,'rx':5,'fill':BARE_COLOR});
+      var txt=svgEl('text',{'x':ex,'y':flagY+12}); txt.textContent=label;
+      eg.appendChild(rect); eg.appendChild(txt);
+      this.gHead.appendChild(eg);
+    }
+    return;
+  }
+  // ---- full mode: HEAD flag ----
   var headCommit=null;
   if(this.head.type==='branch'){
     var b=this.branches[this.head.ref];
@@ -5816,6 +7057,18 @@ var Deck = {
 function buildDeco(){
   var g=document.getElementById('deco-g');
   if(!g) return;
+  // scattered faint stars (deterministic via simple LCG so layout is stable)
+  var seed=20240601;
+  function rnd(){ seed=(seed*1103515245+12345)&0x7fffffff; return seed/0x7fffffff; }
+  for(var s=0;s<120;s++){
+    var sx=rnd()*1200, sy=rnd()*800, sr=rnd()*1.1+0.3;
+    var star=document.createElementNS(SVGNS,'circle');
+    star.setAttribute('class','deco-star');
+    star.setAttribute('cx',sx.toFixed(1)); star.setAttribute('cy',sy.toFixed(1));
+    star.setAttribute('r',sr.toFixed(2));
+    star.setAttribute('opacity',(rnd()*0.10+0.03).toFixed(3));
+    g.appendChild(star);
+  }
   var lanes=[150,330,520,680];
   var x=0, prevPts=[];
   // draw a few wandering lanes with dots, repeated to allow seamless drift

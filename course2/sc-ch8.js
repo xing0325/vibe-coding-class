@@ -159,7 +159,7 @@
   /* 屏 8.1 — 别直接在 main 上改                            */
   /* ====================================================== */
   window.registerScreen({
-    chapter: 8,
+    chapter: 9,
     chapterName: '多人协作',
     id: 'no-main',
     title: '别直接在 main 上改',
@@ -357,7 +357,7 @@
   /* 屏 8.2 — fork → PR → review → merge                    */
   /* ====================================================== */
   window.registerScreen({
-    chapter: 8,
+    chapter: 9,
     chapterName: '多人协作',
     id: 'pr-flow',
     title: 'fork → PR → review',
@@ -440,7 +440,7 @@
   /* 屏 8.3 — merge conflict（人来拍板）                     */
   /* ====================================================== */
   window.registerScreen({
-    chapter: 8,
+    chapter: 9,
     chapterName: '多人协作',
     id: 'conflict',
     title: 'merge conflict',
@@ -552,7 +552,7 @@
   /* 屏 8.4 — cherry-pick（只拣一个 commit）                 */
   /* ====================================================== */
   window.registerScreen({
-    chapter: 8,
+    chapter: 9,
     chapterName: '多人协作',
     id: 'cherry-pick',
     title: 'cherry-pick',

@@ -9,14 +9,18 @@
    CONFIG / TOKENS
    ============================================================ */
 :root{
-  --bg:#0D1117; --text:#E6EDF3; --dim:#8B949E; --git:#F05133;
-  --c-main:#E6EDF3; --c-teal:#2DD4BF; --c-purple:#A78BFA; --c-amber:#FBBF24; --c-pink:#F472B6;
-  --info:#58A6FF; --warn:#3B82F6; --ghost:#4B5563;
+  /* ---- Deep-Space Terminal (v2) ---- */
+  --bg:#0a0e16; --text:#E6EDF3; --dim:#8B949E; --git:#F1502F;
+  /* branch palette: main=cool silver, feature=git orange, feature2=teal, experimental=magenta */
+  --c-main:#E6EDF3; --c-teal:#39D0D8; --c-purple:#A78BFA; --c-amber:#FBBF24; --c-pink:#FF4D9D;
+  --c-magenta:#FF4D9D;
+  --info:#58A6FF; --warn:#3E5C8A; --ghost:#4B5563;
 
-  --font-sans:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang SC','Microsoft YaHei',sans-serif;
-  --font-mono:'JetBrains Mono',ui-monospace,'SF Mono',Menlo,Consolas,monospace;
+  --font-sans:'Source Han Sans SC','Noto Sans CJK SC',-apple-system,BlinkMacSystemFont,'PingFang SC','Microsoft YaHei',sans-serif;
+  --font-mono:'IBM Plex Mono','JetBrains Mono',ui-monospace,'SF Mono',Menlo,Consolas,monospace;
+  --font-quote:'LXGW WenKai','LXGW WenKai Screen',Georgia,'KaiTi','楷体',serif;
 
-  --pane:#161B22; --pane2:#1C2230; --border:#30363D;
+  --pane:#10151f; --pane2:#161d2b; --border:#26303f;
   --ease:cubic-bezier(.22,.61,.36,1);
 }
 
@@ -38,6 +42,30 @@ body{
 @keyframes drift{from{transform:translateX(0)}to{transform:translateX(-220px)}}
 .deco-dot{fill:var(--text);opacity:.06}
 .deco-line{stroke:var(--text);stroke-width:2;opacity:.045;fill:none}
+.deco-star{fill:var(--text)}
+
+/* faint star-field grid + noise texture layered above the drifting graph */
+#bg-stars{
+  position:fixed;inset:0;z-index:0;pointer-events:none;
+  background-image:
+    radial-gradient(circle at center, rgba(230,237,243,.55) 0, rgba(230,237,243,0) 60%);
+  background-size:3px 3px;
+  background-position:0 0;
+  opacity:.10;
+}
+#bg-grid{
+  position:fixed;inset:0;z-index:0;pointer-events:none;opacity:.5;
+  background-image:
+    linear-gradient(rgba(57,208,216,.04) 1px,transparent 1px),
+    linear-gradient(90deg,rgba(57,208,216,.04) 1px,transparent 1px);
+  background-size:48px 48px;
+  -webkit-mask-image:radial-gradient(ellipse 80% 70% at 50% 45%,#000 30%,transparent 100%);
+  mask-image:radial-gradient(ellipse 80% 70% at 50% 45%,#000 30%,transparent 100%);
+}
+#bg-noise{
+  position:fixed;inset:0;z-index:0;pointer-events:none;opacity:.035;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
 
 /* ============================================================
    STAGE / SCREEN LAYOUT
@@ -69,6 +97,18 @@ body{
 .sc-dim{color:var(--dim)}
 .sc-mono{font-family:var(--font-mono);font-feature-settings:"liga" 0}
 .sc-center{text-align:center}
+
+/* 金句 / punch-line type — 霞鹜文楷 with system 楷体 fallback (no external font) */
+.sc-quote{
+  font-family:var(--font-quote);
+  font-size:clamp(20px,2.6vw,32px);
+  font-weight:400;line-height:1.7;letter-spacing:.01em;
+  color:var(--text);
+  padding:.2em 0;
+  text-wrap:balance;
+}
+.sc-quote.big{font-size:clamp(26px,4vw,46px);line-height:1.55}
+.sc-quote .accent{color:var(--git)}
 
 .sc-pill{
   display:inline-flex;align-items:center;gap:6px;
@@ -164,6 +204,19 @@ body{
 .cg-node .label{font-family:var(--font-mono);font-size:12px;fill:var(--bg);font-weight:700;text-anchor:middle;dominant-baseline:central;pointer-events:none}
 .cg-node.dark-label .label{fill:var(--bg)}
 .cg-node.light-label .label{fill:#010409}
+
+/* bare-mode: short hash printed under each node */
+.cg-hash{
+  font-family:var(--font-mono);font-size:11px;font-weight:500;
+  fill:var(--dim);text-anchor:middle;dominant-baseline:hanging;
+  letter-spacing:.02em;pointer-events:none;
+}
+/* bare-mode "你在这" marker — plain pointer, never the HEAD flag */
+.cg-here{transition:transform .4s var(--ease),opacity .4s}
+.cg-here rect{fill:var(--git);rx:5}
+.cg-here text{fill:#fff;font-family:var(--font-sans);font-size:11.5px;font-weight:700;text-anchor:middle;dominant-baseline:central}
+.cg-here .stem{stroke:var(--git);stroke-width:2.5}
+.cg-here .dot{fill:var(--git)}
 
 .cg-pill{
   font-family:var(--font-mono);font-size:12px;font-weight:700;
@@ -284,6 +337,11 @@ body{
 </head>
 <body>
 
+<!-- deep-space backdrop: noise + faint grid + star-field + drifting commit graph -->
+<div id="bg-noise" aria-hidden="true"></div>
+<div id="bg-grid" aria-hidden="true"></div>
+<div id="bg-stars" aria-hidden="true"></div>
+
 <!-- decorative drifting commit graph -->
 <div id="bg-deco" aria-hidden="true">
   <svg viewBox="0 0 1200 800" preserveAspectRatio="xMidYMid slice">
@@ -380,8 +438,10 @@ function el(tag, cls, txt){
 }
 
 var BRANCH_COLORS = {
-  main:'#E6EDF3', teal:'#2DD4BF', purple:'#A78BFA', amber:'#FBBF24', pink:'#F472B6'
+  main:'#E6EDF3', teal:'#39D0D8', purple:'#A78BFA', amber:'#FBBF24', pink:'#FF4D9D'
 };
+// bare ("裸线") mode: every node shares one colour — git orange.
+var BARE_COLOR = '#F1502F';
 // dark dot colors that need a light text label
 function needsDarkLabel(hex){
   // returns true if label text should be dark (because dot is light)
@@ -390,6 +450,22 @@ function needsDarkLabel(hex){
   var r=parseInt(c.substr(0,2),16),g=parseInt(c.substr(2,2),16),b=parseInt(c.substr(4,2),16);
   var lum=(0.299*r+0.587*g+0.114*b);
   return lum>150; // light dot -> dark label
+}
+
+// deterministic 7-char short hash from an arbitrary string (FNV-1a -> hex).
+// Stable across replays/back-stepping; never random.
+function shortHash(str){
+  str = String(str==null?'':str);
+  var h = 0x811c9dc5; // FNV offset basis
+  for(var i=0;i<str.length;i++){
+    h ^= str.charCodeAt(i);
+    h = (h + ((h<<1)+(h<<4)+(h<<7)+(h<<8)+(h<<24))) >>> 0; // *16777619 mod 2^32
+  }
+  // mix once more so single-char labels (A,B,C…) diverge nicely
+  h = (h ^ (h>>>15)) >>> 0;
+  var hex = h.toString(16);
+  while(hex.length<7) hex = '0'+hex;        // pad
+  return hex.substr(0,7);                    // exactly 7 chars
 }
 
 /* ============================================================
@@ -425,6 +501,10 @@ CommitGraph.prototype._reset = function(){
   this.laneCount = 0;
   this.head = {type:'branch', ref:null}; // {type:'branch'|'commit', ref}
   this.detached = false;
+  // ---- bare ("裸线") mode state ----
+  this.bare = false;     // true => no branch pills, no HEAD flag, single colour, flat line
+  this.showHashes = false;
+  this.hereId = null;    // commit id wearing the plain "你在这" marker (not HEAD)
   this.gEdges.innerHTML='';
   this.gNodes.innerHTML='';
   this.gLabels.innerHTML='';
@@ -445,17 +525,57 @@ CommitGraph.prototype._animate = function(want){
   return want !== false;
 };
 
-/* ---- public: init a branch with N commits in a row ---- */
-CommitGraph.prototype.init = function(branchName, ids){
-  var color = BRANCH_COLORS[branchName] || BRANCH_COLORS.main;
+/* ---- public: init a branch with N commits in a row ----
+   opts (optional):
+     bare:true    -> 裸线模式: no branch pills, no HEAD flag, single colour, flat line
+     hashes:true  -> print a deterministic 7-char short hash under each node
+     here:true    -> mark the LAST node with the plain "你在这" marker
+   `ids` may be plain labels ['A','B'] OR objects [{label:'A',hash:'abc1234'}].
+*/
+CommitGraph.prototype.init = function(branchName, ids, opts){
+  opts = opts || {};
+  this.bare = !!opts.bare;
+  this.showHashes = !!opts.hashes;
+
+  // 知识锁：bare 裸线模式下，分离态警告条(含 "HEAD" 字样)绝不能出现在 DOM 里——
+  // 前 4 章还没讲 HEAD/分离态。彻底清空文字 + 移出布局；完整模式恢复。
+  if(this.banner){
+    if(this.bare){ this.banner.style.display='none'; this.banner.textContent=''; this.banner.classList.remove('show'); }
+    else { this.banner.style.display=''; if(!this.banner.textContent){ this.banner.textContent='⚠ HEAD 处于分离态 (detached HEAD) — 此处的提交无分支收留'; } }
+  }
+
+  // bare mode: one unified colour (git orange) for every node; otherwise per-branch
+  var color = this.bare ? (opts.color || BARE_COLOR)
+                        : (BRANCH_COLORS[branchName] || BRANCH_COLORS.main);
   var lane = this.laneCount++;
   this.branches[branchName] = {name:branchName, color:color, lane:lane, head:null};
   this.head = {type:'branch', ref:branchName};
-  var self=this;
-  ids.forEach(function(id, i){
-    self._createCommit(id, branchName, (i===0?[]:[ids[i-1]]), {anim:false});
+
+  var self=this, prevId=null;
+  ids.forEach(function(item, i){
+    var id, hash;
+    if(item && typeof item==='object'){ id=item.label; hash=item.hash; }
+    else { id=item; }
+    var c=self._createCommit(id, branchName, (prevId!=null?[prevId]:[]), {anim:false});
+    if(hash!=null) c.hash=hash;          // explicit hash from object form wins
+    prevId=id;
   });
+
+  if(opts.here && ids.length){
+    var last=ids[ids.length-1];
+    this.hereId = (last && typeof last==='object') ? last.label : last;
+  }
+
   this._render(false);
+  return this;
+};
+
+/* ---- public: place the plain "你在这" marker on a node (bare mode) ---- */
+CommitGraph.prototype.markHere = function(id){
+  // accept null/false to clear
+  if(id==null || id===false){ this.hereId=null; }
+  else if(this.commits[id]){ this.hereId=id; }
+  this._render(true);
   return this;
 };
 
@@ -600,7 +720,8 @@ CommitGraph.prototype._render = function(animate){
   this.order.forEach(function(cid){var c=self.commits[cid];
     if(c.index>maxIdx)maxIdx=c.index; if(c.lane>maxLane)maxLane=c.lane;});
   Object.keys(this.branches).forEach(function(bn){var b=self.branches[bn];if(b.lane>maxLane)maxLane=b.lane;});
-  var W=this._colX(maxIdx)+160; // room for pills
+  // full mode leaves room on the right for branch pills; bare mode trims to the line
+  var W=this._colX(maxIdx)+(this.bare?70:160);
   var H=this._laneY(maxLane)+90;
   this.svg.setAttribute('viewBox','0 0 '+Math.max(W,300)+' '+Math.max(H,200));
 
@@ -646,14 +767,21 @@ CommitGraph.prototype._render = function(animate){
     var label = c.label || cid;
     var t=svgEl('text',{'class':'label'}); t.textContent=label.length>3?label.substr(0,3):label;
     g.appendChild(t);
+    // bare-mode: short hash printed under the node
+    if(self.showHashes){
+      var hsh = c.hash || shortHash(cid);
+      var ht=svgEl('text',{'class':'cg-hash','x':0,'y':26}); ht.textContent=hsh;
+      g.appendChild(ht);
+    }
     if(c._new && animate){ g.classList.add('appear'); c._new=false; }
     else { c._new=false; }
     c._gx=x; c._gy=y;
     self.gNodes.appendChild(g);
   });
 
-  // ---- BRANCH PILLS ----
+  // ---- BRANCH PILLS ----  (skipped entirely in bare mode)
   this.gLabels.innerHTML='';
+  if(!this.bare){
   Object.keys(this.branches).forEach(function(bn){
     var b=self.branches[bn];
     var hc=self.commits[b.head];
@@ -671,9 +799,32 @@ CommitGraph.prototype._render = function(animate){
     g.appendChild(rect); g.appendChild(txt);
     self.gLabels.appendChild(g);
   });
+  }
 
   // ---- HEAD FLAG ----
   this.gHead.innerHTML='';
+  if(this.bare){
+    // ---- bare mode: NO HEAD flag ever. Optional plain "你在这" marker. ----
+    var hereC = this.hereId ? this.commits[this.hereId] : null;
+    if(hereC){
+      var ex=this._colX(hereC.index), ey=this._laneY(hereC.lane);
+      var eg=svgEl('g',{'class':'cg-here'});
+      var label='你在这一版';
+      var ew=label.length*12.5+18;          // CJK glyphs are wide
+      var flagY=ey-60;
+      // little stem + dot, plain pointer (deliberately NOT the HEAD flag style)
+      var stem=svgEl('line',{'class':'stem','x1':ex,'y1':ey-17,'x2':ex,'y2':flagY+22});
+      eg.appendChild(stem);
+      var dot=svgEl('circle',{'class':'dot','cx':ex,'cy':flagY+22,'r':3});
+      eg.appendChild(dot);
+      var rect=svgEl('rect',{'x':ex-ew/2,'y':flagY,'width':ew,'height':24,'rx':5,'fill':BARE_COLOR});
+      var txt=svgEl('text',{'x':ex,'y':flagY+12}); txt.textContent=label;
+      eg.appendChild(rect); eg.appendChild(txt);
+      this.gHead.appendChild(eg);
+    }
+    return;
+  }
+  // ---- full mode: HEAD flag ----
   var headCommit=null;
   if(this.head.type==='branch'){
     var b=this.branches[this.head.ref];
@@ -1076,6 +1227,18 @@ var Deck = {
 function buildDeco(){
   var g=document.getElementById('deco-g');
   if(!g) return;
+  // scattered faint stars (deterministic via simple LCG so layout is stable)
+  var seed=20240601;
+  function rnd(){ seed=(seed*1103515245+12345)&0x7fffffff; return seed/0x7fffffff; }
+  for(var s=0;s<120;s++){
+    var sx=rnd()*1200, sy=rnd()*800, sr=rnd()*1.1+0.3;
+    var star=document.createElementNS(SVGNS,'circle');
+    star.setAttribute('class','deco-star');
+    star.setAttribute('cx',sx.toFixed(1)); star.setAttribute('cy',sy.toFixed(1));
+    star.setAttribute('r',sr.toFixed(2));
+    star.setAttribute('opacity',(rnd()*0.10+0.03).toFixed(3));
+    g.appendChild(star);
+  }
   var lanes=[150,330,520,680];
   var x=0, prevPts=[];
   // draw a few wandering lanes with dots, repeated to allow seamless drift

@@ -51,6 +51,8 @@
 
       /* ---------- 屏 1.3 Git 登场 ---------- */
       '.c-ch1-arrive-graph{width:100%;min-height:150px;display:flex;align-items:center;justify-content:center;margin:8px 0 6px;}',
+      '.c-ch1-foreshadow{text-align:center;font-size:14px;color:var(--dim);margin:2px auto 0;max-width:560px;}',
+      '.c-ch1-foreshadow b{color:var(--git);font-weight:700;}',
       '.c-ch1-folder-row{display:flex;align-items:center;justify-content:center;gap:40px;flex-wrap:wrap;margin:18px 0 6px;}',
       '.c-ch1-folder{position:relative;display:flex;flex-direction:column;align-items:center;gap:12px;}',
       '.c-ch1-folder-halo{position:absolute;inset:-22px -26px -30px -26px;border-radius:50%;opacity:0;',
@@ -318,6 +320,7 @@
         '<div style="text-align:center;margin-bottom:6px;">' + gitLogo() + '</div>' +
         '<h2 class="sc-h2" style="text-align:center;">于是，<span style="color:var(--git)">Git</span> 登场</h2>' +
         '<div class="c-ch1-arrive-graph" id="c-ch1-graph"></div>' +
+        '<p class="c-ch1-foreshadow" id="c-ch1-foreshadow">那一团乱麻，被收束成一排整齐的小圆点。<b>每个点是什么？下一章揭晓 →</b></p>' +
         '<div class="c-ch1-folder-row">' +
           '<div class="c-ch1-folder" id="c-ch1-folder">' +
             '<span class="c-ch1-folder-halo"></span>' +
@@ -339,9 +342,11 @@
       var def = stage.querySelector('#c-ch1-def');
 
       var g = api.graph(graphHost, {});
-      // 初始（第 0 步）：先呈现一条"还在收束中"的稀疏状态 —— 这里直接给一条 main 雏形，
+      // 初始（第 0 步）：先呈现一条"还在收束中"的稀疏状态。
+      // ⚠ 知识锁：第 1 章还没讲 commit / 分支 / HEAD，这里只用 bare 裸线模式
+      //   画一排朴素圆点作"视觉伏笔"——不出现分支标签，也不出现 HEAD 旗。
       // 真正的"乱麻→直线"由 step 推进时补全节点，达到视觉上的归位对齐。
-      g.init('main', ['A', 'B']);
+      g.init('main', ['A', 'B'], { bare: true });
 
       // 定义句与文件夹标签初始为"未点亮"
       var defFrag = api.frag(def);
@@ -349,10 +354,11 @@
       // ---------- 分步 ----------
       // step 1：乱麻 → 直线收束（补齐节点，整齐对齐成一排 ●）
       api.step(function (animated) {
-        // 幂等：无论 animated 与否，最终都是同一条整齐 main: A B C D E
+        // 幂等：无论 animated 与否，最终都是同一条整齐裸线 A B C D E
+        // 仍用 bare 模式：只是一排朴素圆点，没有分支标签 / HEAD 旗（那些下一章才讲）。
         g.reset();
-        g.init('main', ['A', 'B', 'C', 'D', 'E']);
-        // animated=true 时引擎自带的 addCommit/init 动画即视为"归位对齐"；
+        g.init('main', ['A', 'B', 'C', 'D', 'E'], { bare: true });
+        // animated=true 时引擎自带的 init 动画即视为"归位对齐"；
         // 这里不依赖额外计时器，保证后退重放也得到同样的最终态。
       });
 
@@ -367,7 +373,7 @@
       api.onReset(function () {
         folder.classList.remove('c-ch1-blessed');
         g.reset();
-        g.init('main', ['A', 'B']);
+        g.init('main', ['A', 'B'], { bare: true });
       });
     }
   });

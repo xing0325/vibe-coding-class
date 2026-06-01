@@ -1,5 +1,5 @@
 /* ============================================================
- * 第 5 章 · HEAD 与指针  (chapter:5, play:true)
+ * 第 5 章 · HEAD 与指针  (chapter:6, play:true)
  * 屏 5.1 head-what     · HEAD 是什么（HEAD🚩 稳插 D，可拖拽提示）
  * 屏 5.2 detached      · 分离头指针（拖 / 按钮把 HEAD 移到 B → 冷色 + 警告带）
  * 屏 5.3 orphan        · 孤儿 commit / 宇航员（分离态提交 → 飘走 → 救回来）
@@ -95,8 +95,8 @@
   /* 屏 5.1 — HEAD 是什么                                    */
   /* ====================================================== */
   window.registerScreen({
-    chapter: 5,
-    chapterName: 'HEAD 与指针',
+    chapter: 6,
+    chapterName: '指针与 HEAD',
     id: 'head-what',
     title: 'HEAD 是什么',
     subtitle: '你现在站在哪',
@@ -140,8 +140,8 @@
   /* 屏 5.2 — 分离头指针                                     */
   /* ====================================================== */
   window.registerScreen({
-    chapter: 5,
-    chapterName: 'HEAD 与指针',
+    chapter: 6,
+    chapterName: '指针与 HEAD',
     id: 'detached',
     title: '分离头指针',
     subtitle: 'detached HEAD',
@@ -215,8 +215,8 @@
   /* 屏 5.3 — 孤儿 commit / 宇航员                            */
   /* ====================================================== */
   window.registerScreen({
-    chapter: 5,
-    chapterName: 'HEAD 与指针',
+    chapter: 6,
+    chapterName: '指针与 HEAD',
     id: 'orphan',
     title: '孤儿 commit',
     subtitle: '飘走的宇航员',
@@ -310,8 +310,8 @@
   /* 屏 5.4 — 洞察小结                                        */
   /* ====================================================== */
   window.registerScreen({
-    chapter: 5,
-    chapterName: 'HEAD 与指针',
+    chapter: 6,
+    chapterName: '指针与 HEAD',
     id: 'head-insight',
     title: '洞察小结',
     subtitle: '只看 vs 留住',

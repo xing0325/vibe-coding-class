@@ -31,6 +31,8 @@
       ".c-ch3-pushlabel{font-family:var(--font-mono);font-size:13px;fill:var(--git);text-anchor:middle;font-weight:700}",
       ".c-ch3-commit{transition:opacity .3s}",
       ".c-ch3-commit circle{stroke:#010409;stroke-width:2}",
+      ".c-ch3-commit-hash{font-family:var(--font-mono);font-size:11px;fill:var(--dim);",
+        "text-anchor:middle;dominant-baseline:hanging;letter-spacing:.02em}",
       ".c-ch3-fly{transition:transform 1s var(--ease)}",
       ".c-ch3-lr-actions{display:flex;gap:12px;justify-content:center;margin-top:18px;flex-wrap:wrap}",
       ".c-ch3-spark{position:fixed;width:7px;height:7px;border-radius:50%;background:var(--git);",
@@ -179,13 +181,25 @@
       var pushLbl = s("text", { "class": "c-ch3-pushlabel", x: (pStart + pEnd) / 2, y: pipeY - 20 }); pushLbl.textContent = "push ▶";
       svg.appendChild(pipe); svg.appendChild(arrow); svg.appendChild(pushLbl);
 
-      /* 本地 3 个 commit 节点 */
-      var COLORS = ["var(--git)", "var(--c-amber)", "var(--c-purple)"];
+      /* 本地仓库的提交链 —— bare 裸线模式：
+         ⚠ 知识锁：第 3 章还没讲分支/HEAD，这里所有点统一用 git 橙单色、
+            一条直线串起来，节点下方标短 id，不出现分支标签也不出现 HEAD 旗。 */
+      var BARE = "var(--git)";
+      var HASHES = ["a1b2c3d", "9c3d4e5", "d5e6f70"]; // 与第 2 章风格一致的短 id
       var commits = [];
       var startX = lx + 150, startGap = 56;
+      // 先画连接相邻节点的裸线（在节点下层）
+      var bareLine = s("path", {
+        "class": "c-ch3-bareline",
+        d: "M" + startX + " " + lcy + " L" + (startX + 2 * startGap) + " " + lcy,
+        fill: "none", stroke: BARE, "stroke-width": 3, opacity: ".9"
+      });
+      svg.appendChild(bareLine);
       for (var i = 0; i < 3; i++) {
         var g = s("g", { "class": "c-ch3-commit", transform: "translate(" + (startX + i * startGap) + "," + lcy + ")" });
-        g.appendChild(s("circle", { r: 15, cx: 0, cy: 0, fill: COLORS[i] }));
+        g.appendChild(s("circle", { r: 15, cx: 0, cy: 0, fill: BARE, stroke: "#010409", "stroke-width": 2 }));
+        var hsh = s("text", { "class": "c-ch3-commit-hash", x: 0, y: 30 }); hsh.textContent = HASHES[i];
+        g.appendChild(hsh);
         svg.appendChild(g);
         commits.push({ g: g, lx: startX + i * startGap, rxTarget: rx + 70 + i * startGap });
       }
@@ -196,6 +210,10 @@
           var x = moved ? c.rxTarget : c.lx;
           c.g.setAttribute("transform", "translate(" + x + "," + lcy + ")");
         });
+        // 裸线跟随：本地态连本地链，已推送态连云端链
+        var s0 = moved ? commits[0].rxTarget : commits[0].lx;
+        var s2 = moved ? commits[2].rxTarget : commits[2].lx;
+        bareLine.setAttribute("d", "M" + s0 + " " + lcy + " L" + s2 + " " + lcy);
         pipe.classList.toggle("live", !!moved);
         arrow.classList.toggle("live", !!moved);
       }
@@ -224,7 +242,7 @@
       var aiCard = api.aiCard({
         effect: "把本地改动同步到云端",
         say: "帮我把代码推到 GitHub 上",
-        cmd: "git push origin main"
+        cmd: "git push"
       });
       aiHolder.appendChild(aiCard);
       api.frag(aiHolder);
@@ -354,7 +372,7 @@
       /* 收尾说明 */
       var card = h("div", "sc-card"); card.style.maxWidth = "760px"; card.style.margin = "16px auto 0";
       card.innerHTML = '<p class="sc-p sc-center">每个人都把自己的仓库往同一个 hub 上放，' +
-        "大家就能在同一个地方<b>看见彼此的代码、协作、合并</b>——这就是 GitHub。</p>";
+        "大家就能在同一个地方<b>看见彼此的代码、一起协作</b>——这就是 GitHub。</p>";
       api.frag(card);
       stage.appendChild(card);
 

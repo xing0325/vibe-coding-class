@@ -1,23 +1,24 @@
 /* ============================================================
-   sc-undo.js — 第 4 章 · 三颗后悔药（王琦的故事）
+   sc-undo.js — 第 4 章 · 后悔药（王琦 + 你 · 漫画版）
    ------------------------------------------------------------
-   v2 分镜核心新内容：后悔药被提到「分支」之前先讲，
-   只讲【效果】和【场景】，绝不碰原理。用王琦的具体故事讲。
-   只有三颗药：discard / reset / revert。第四颗一个字都不提。
+   v3 漫画改写：把纯文字场景改成「你」和「王琦」两个线性小人演的漫画。
+   主角「你」爱搞幺蛾子（丑照 / 幺蛾子简介），嘉宾「王琦」被整、出手收拾。
+   只讲【效果】和【场景】，绝不碰原理。三颗药：discard / reset / revert。
+   revert 降级为「记住它存在」一屏，诚实说明日常用不上。
 
-   ⭐ 知识锁（本文件逐字把关，绝对不出现）：
-     分支 / branch / main / HEAD / 指针 / 分离头指针 / 孤儿 /
+   ⭐ 知识锁（本文件逐字把关，绝对不出现于可见文案/按钮/气泡/tooltip）：
+     分支 / branch / main / HEAD / 指针 / 分离 / 孤儿 /
      merge / checkout / 快照 / 父节点 / 移动指针 / 工作区 / 暂存区
-   这条线只叫「提交历史 / 提交线」，不叫 main；
+   这条线只叫「提交线 / 项目这一版」，不叫 main；
    最新点标「你在这一版」，不叫 HEAD。
 
    框架由另一 agent 提供，本文件只调用契约：
-     window.registerScreen({ chapter, chapterName, id, title, play?, render })
+     window.registerScreen({ chapter, chapterName, id, title, render })
      api.step(fn) / api.frag(el) / api.aiCard({effect,say,cmd}) /
      api.onReset(fn) / api.isReplay
      g = api.graph(container, opts)
      g.init('main', ['A','B','C','D'], {bare:true, hashes:true, here:true})
-        —— 裸提交线：无分支标签、无旗帜，每点下方短 hash，最新点标「你在这一版」。
+        —— 裸提交线：单色橙、每点下方短 hash、最新点标「你在这一版」。
         ("main" 仅是内部名，bare 模式下不显示，文案里绝不写出来。)
      g.addCommit('main','E') / g.highlight(id,bool) / g.setGhost(id,bool) /
      g.getNodeXY(id) / g.reset()
@@ -28,10 +29,10 @@
   'use strict';
 
   var CH = 4;
-  var CHNAME = '三颗后悔药';
+  var CHNAME = '后悔药';
 
   /* 每个提交点的「短 hash」——你和 AI 指认某一版的通用代号。
-     场景文案里出现的 c3d4e5f / b2c3d4e 就来自这里，保证屏上和「对 AI 说」框里一字不差。 */
+     场景文案里出现的 c3d4e5f / a1b2c3d 就来自这里，保证屏上和「对 AI 说」框里一字不差。 */
   var HASH = {
     A: 'a1b2c3d',
     B: 'b2c3d4e',
@@ -53,6 +54,98 @@
     return e;
   }
 
+  /* ============================================================
+     两个小人 sprite —— 全章复用
+     线性小人：圆头 + 线条身体，深空终端线性风；下方名字牌。
+     makePerson(name, opts) -> 返回一个 .c-undo-person DOM（内含 SVG + 名字牌）
+       name: '你' | '王琦'
+       opts.mood: 'smirk'(坏笑) | 'angry'(瞪眼) | 'calm'(平和) | 'shout'(喊)
+       opts.color: 主体描边色（默认 你=teal，王琦=amber）
+       opts.flip: true 水平翻转（让两人面对面）
+     ------------------------------------------------------------ */
+  var SVGNS = 'http://www.w3.org/2000/svg';
+  function sv(name, attrs) {
+    var e = document.createElementNS(SVGNS, name);
+    if (attrs) for (var k in attrs) e.setAttribute(k, attrs[k]);
+    return e;
+  }
+
+  function makePerson(name, opts) {
+    opts = opts || {};
+    var isYou = (name === '你');
+    var col = opts.color || (isYou ? 'var(--c-teal)' : 'var(--c-amber)');
+    var mood = opts.mood || 'calm';
+
+    var box = el('div', 'c-undo-person' + (opts.flip ? ' flip' : ''));
+
+    var s = sv('svg', { viewBox: '0 0 80 110', width: '80', height: '110', 'class': 'c-undo-psvg' });
+    s.style.setProperty('--pcol', col);
+
+    // 头
+    s.appendChild(sv('circle', { cx: 40, cy: 26, r: 16, fill: 'none', stroke: col, 'stroke-width': 3 }));
+
+    // 眼睛（随 mood 变）
+    if (mood === 'angry') {
+      // 怒眉 + 竖瞪眼
+      s.appendChild(sv('line', { x1: 30, y1: 19, x2: 37, y2: 23, stroke: col, 'stroke-width': 2.4, 'stroke-linecap': 'round' }));
+      s.appendChild(sv('line', { x1: 50, y1: 19, x2: 43, y2: 23, stroke: col, 'stroke-width': 2.4, 'stroke-linecap': 'round' }));
+      s.appendChild(sv('circle', { cx: 33.5, cy: 27, r: 2.1, fill: col }));
+      s.appendChild(sv('circle', { cx: 46.5, cy: 27, r: 2.1, fill: col }));
+    } else if (mood === 'smirk') {
+      // 坏笑：眯眼弧线
+      s.appendChild(sv('path', { d: 'M30 26 q3.5 -3 7 0', fill: 'none', stroke: col, 'stroke-width': 2.2, 'stroke-linecap': 'round' }));
+      s.appendChild(sv('path', { d: 'M43 26 q3.5 -3 7 0', fill: 'none', stroke: col, 'stroke-width': 2.2, 'stroke-linecap': 'round' }));
+    } else {
+      s.appendChild(sv('circle', { cx: 33.5, cy: 25, r: 2, fill: col }));
+      s.appendChild(sv('circle', { cx: 46.5, cy: 25, r: 2, fill: col }));
+    }
+
+    // 嘴（随 mood 变）
+    if (mood === 'smirk') {
+      s.appendChild(sv('path', { d: 'M32 33 q8 5 15 -1', fill: 'none', stroke: col, 'stroke-width': 2.2, 'stroke-linecap': 'round' }));
+    } else if (mood === 'angry') {
+      s.appendChild(sv('path', { d: 'M32 35 q8 -5 15 1', fill: 'none', stroke: col, 'stroke-width': 2.2, 'stroke-linecap': 'round' }));
+    } else if (mood === 'shout') {
+      s.appendChild(sv('ellipse', { cx: 40, cy: 33, rx: 4.5, ry: 5.5, fill: 'none', stroke: col, 'stroke-width': 2.2 }));
+    } else {
+      s.appendChild(sv('line', { x1: 34, y1: 33, x2: 46, y2: 33, stroke: col, 'stroke-width': 2.2, 'stroke-linecap': 'round' }));
+    }
+
+    // 身体（脊柱）
+    s.appendChild(sv('line', { x1: 40, y1: 42, x2: 40, y2: 78, stroke: col, 'stroke-width': 3, 'stroke-linecap': 'round' }));
+    // 手臂（angry/shout 抬手，calm/smirk 自然垂）
+    if (mood === 'angry' || mood === 'shout') {
+      s.appendChild(sv('path', { d: 'M40 52 L22 44', fill: 'none', stroke: col, 'stroke-width': 3, 'stroke-linecap': 'round' }));
+      s.appendChild(sv('path', { d: 'M40 52 L58 44', fill: 'none', stroke: col, 'stroke-width': 3, 'stroke-linecap': 'round' }));
+    } else {
+      s.appendChild(sv('path', { d: 'M40 52 L24 60', fill: 'none', stroke: col, 'stroke-width': 3, 'stroke-linecap': 'round' }));
+      s.appendChild(sv('path', { d: 'M40 52 L56 60', fill: 'none', stroke: col, 'stroke-width': 3, 'stroke-linecap': 'round' }));
+    }
+    // 腿
+    s.appendChild(sv('path', { d: 'M40 78 L28 100', fill: 'none', stroke: col, 'stroke-width': 3, 'stroke-linecap': 'round' }));
+    s.appendChild(sv('path', { d: 'M40 78 L52 100', fill: 'none', stroke: col, 'stroke-width': 3, 'stroke-linecap': 'round' }));
+
+    box.appendChild(s);
+
+    // 名字牌
+    var tag = el('div', 'c-undo-ptag' + (isYou ? ' me' : ''), name);
+    box.appendChild(tag);
+    return box;
+  }
+
+  /* 气泡对话：speech(person, text, opts)
+     person: '你' | '王琦'（决定气泡尾巴方向/配色）
+     opts.tail: 'left'|'right'（尾巴指向哪个小人，默认按 person 自动）*/
+  function speech(person, text, opts) {
+    opts = opts || {};
+    var isYou = (person === '你');
+    var cls = 'c-undo-bubble ' + (isYou ? 'from-you' : 'from-wq') +
+      ' tail-' + (opts.tail || (isYou ? 'left' : 'right'));
+    var b = el('div', cls);
+    b.innerHTML = '<span class="who">' + person + '</span><span class="txt">' + text + '</span>';
+    return b;
+  }
+
   /* ------------------------------------------------------------
      一次性注入本章样式
      ------------------------------------------------------------ */
@@ -67,6 +160,7 @@
       '.c-undo-lead{max-width:64ch}',
       '.c-undo-lead b{color:var(--c-teal)}',
       '.c-undo-lead .wq{color:var(--c-amber);font-weight:800}',     /* 王琦高亮 */
+      '.c-undo-lead .me{color:var(--c-teal);font-weight:800}',      /* 你 高亮 */
       '.c-undo-lead .bad{color:var(--git);font-weight:800}',
       '.c-undo-mono{font-family:var(--font-mono);color:var(--c-teal)}',
 
@@ -75,12 +169,12 @@
         'min-height:240px;padding:clamp(16px,2.4vw,30px);overflow:visible}',
       '.c-undo-canvas .cg-wrap{width:100%}',
 
-      /* 自绘的 hash 小标（覆盖在画布上，保证与「对 AI 说」框一字不差） */
+      /* 自绘的 hash 小标 */
       '.c-undo-haslayer{position:absolute;inset:0;pointer-events:none;z-index:3}',
       '.c-undo-hcap{position:absolute;transform:translate(-50%,0);font-family:var(--font-mono);',
         'font-size:11px;font-weight:500;color:var(--dim);letter-spacing:.02em;white-space:nowrap}',
 
-      /* 「你在这一版」纯标记（绝非旗帜，story 用语） */
+      /* 「你在这一版」纯标记 */
       '.c-undo-here{position:absolute;transform:translate(-50%,-100%);z-index:4;',
         'display:flex;flex-direction:column;align-items:center;gap:2px;pointer-events:none}',
       '.c-undo-here .lab{background:var(--git);color:#fff;font-family:var(--font-sans);',
@@ -88,22 +182,69 @@
         'box-shadow:0 2px 8px rgba(240,81,51,.4)}',
       '.c-undo-here .stem{width:2.5px;height:14px;background:var(--git)}',
 
-      /* 一团「未提交的乱改」——零散抖动小方块 */
-      '.c-undo-mess{position:absolute;z-index:5;transform:translate(-50%,-50%);',
-        'transition:opacity .4s var(--ease),transform .4s var(--ease)}',
-      '.c-undo-mess.gone{opacity:0;transform:translate(-50%,-50%) scale(.3)}',
-      '.c-undo-blk{position:absolute;width:13px;height:13px;border-radius:3px;',
-        'background:var(--c-amber);opacity:.9;animation:c-undo-jit 1.1s ease-in-out infinite}',
+      /* ---- 小人 sprite ---- */
+      '.c-undo-person{display:flex;flex-direction:column;align-items:center;gap:6px;flex:0 0 auto}',
+      '.c-undo-person.flip .c-undo-psvg{transform:scaleX(-1)}',
+      '.c-undo-psvg{filter:drop-shadow(0 0 6px color-mix(in srgb,var(--pcol) 35%,transparent))}',
+      '.c-undo-ptag{font-family:var(--font-sans);font-size:12px;font-weight:800;letter-spacing:.04em;',
+        'padding:2px 11px;border-radius:999px;color:var(--c-amber);',
+        'border:1px solid var(--c-amber);background:rgba(251,191,36,.10)}',
+      '.c-undo-ptag.me{color:var(--c-teal);border-color:var(--c-teal);background:rgba(57,208,216,.10)}',
+
+      /* ---- 气泡 ---- */
+      '.c-undo-bubble{position:relative;max-width:30ch;background:var(--pane2);border:1px solid var(--border);',
+        'border-radius:14px;padding:10px 14px;font-size:14px;line-height:1.5;color:var(--text)}',
+      '.c-undo-bubble .who{display:block;font-size:11px;font-weight:800;margin-bottom:2px}',
+      '.c-undo-bubble.from-you{border-color:var(--c-teal)}',
+      '.c-undo-bubble.from-you .who{color:var(--c-teal)}',
+      '.c-undo-bubble.from-wq{border-color:var(--c-amber)}',
+      '.c-undo-bubble.from-wq .who{color:var(--c-amber)}',
+      '.c-undo-bubble .txt b{color:var(--c-amber)}',
+      '.c-undo-bubble.from-you .txt b{color:var(--c-teal)}',
+      /* 尾巴 */
+      '.c-undo-bubble::after{content:"";position:absolute;bottom:-8px;width:14px;height:14px;',
+        'background:var(--pane2);border-right:1px solid;border-bottom:1px solid;',
+        'border-color:inherit;transform:rotate(45deg)}',
+      '.c-undo-bubble.tail-left::after{left:22px}',
+      '.c-undo-bubble.tail-right::after{right:22px}',
+
+      /* ---- 漫画格 ---- */
+      '.c-undo-comic{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;width:100%}',
+      '@media(max-width:860px){.c-undo-comic{grid-template-columns:1fr}}',
+      '.c-undo-panel{position:relative;background:var(--pane);border:1px solid var(--border);',
+        'border-radius:16px;padding:16px 14px 14px;display:flex;flex-direction:column;gap:12px;',
+        'min-height:230px;overflow:hidden}',
+      '.c-undo-panel .pnum{position:absolute;top:10px;right:12px;font-family:var(--font-mono);',
+        'font-size:12px;font-weight:800;color:var(--dim);opacity:.8}',
+      '.c-undo-panel .stagea{flex:1;display:flex;align-items:center;justify-content:center;',
+        'gap:14px;position:relative;min-height:120px}',
+      '.c-undo-panel .bubbox{display:flex;justify-content:center}',
+      /* 入场（step 推进时） */
+      '.c-undo-panel.pending{opacity:.18;filter:grayscale(.7)}',
+      '.c-undo-panel{transition:opacity .45s var(--ease),filter .45s var(--ease)}',
+      '.c-undo-panel.live{box-shadow:0 0 0 1px var(--git) inset,0 0 22px rgba(240,81,51,.16)}',
+
+      /* 电脑屏（你坐电脑前） */
+      '.c-undo-laptop{position:relative;width:54px;height:40px;flex:0 0 auto}',
+      '.c-undo-laptop .scr{position:absolute;top:0;left:6px;width:42px;height:28px;border-radius:4px;',
+        'border:2px solid var(--dim);background:#010409;overflow:hidden}',
+      '.c-undo-laptop .base{position:absolute;bottom:0;left:0;width:54px;height:6px;border-radius:0 0 5px 5px;',
+        'background:var(--dim)}',
+
+      /* 一团「还没保存的乱改」——抖动小方块 */
+      '.c-undo-mess{position:relative;width:46px;height:42px;flex:0 0 auto;',
+        'transition:opacity .45s var(--ease),transform .45s var(--ease)}',
+      '.c-undo-mess.gone{opacity:0;transform:scale(.25)}',
+      '.c-undo-blk{position:absolute;width:12px;height:12px;border-radius:3px;',
+        'background:var(--c-amber);opacity:.92;animation:c-undo-jit 1.1s ease-in-out infinite}',
       '@keyframes c-undo-jit{0%,100%{transform:translate(0,0) rotate(-6deg)}',
         '50%{transform:translate(2px,-3px) rotate(7deg)}}',
-      '.c-undo-mess .tag{position:absolute;top:-22px;left:50%;transform:translateX(-50%);',
+      '.c-undo-mess .tag{position:absolute;top:-20px;left:50%;transform:translateX(-50%);',
         'white-space:nowrap;font-size:11px;color:var(--c-amber);font-weight:700;font-family:var(--font-sans)}',
-
-      /* D「干净复位」光效 */
-      '@keyframes c-undo-clean{0%{box-shadow:0 0 0 0 rgba(45,212,191,.6)}',
-        '100%{box-shadow:0 0 0 26px rgba(45,212,191,0)}}',
-      '.c-undo-cleanring{position:absolute;z-index:2;width:34px;height:34px;border-radius:50%;',
-        'transform:translate(-50%,-50%);animation:c-undo-clean .8s var(--ease) forwards;pointer-events:none}',
+      /* 干净复位的「✓ 没了」 */
+      '.c-undo-clean{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;',
+        'font-size:13px;font-weight:800;color:var(--c-teal);opacity:0;transition:opacity .4s var(--ease)}',
+      '.c-undo-clean.show{opacity:1}',
 
       /* 操作 + AI 区 */
       '.c-undo-actions{display:flex;gap:12px;flex-wrap:wrap;justify-content:center;margin-top:4px}',
@@ -111,8 +252,8 @@
       '.c-undo-ai .aicard{max-width:620px;width:100%}',
 
       /* 「对你来说」小卡 */
-      '.c-undo-foryou{background:linear-gradient(135deg,rgba(45,212,191,.10),rgba(167,139,250,.08));',
-        'border:1px solid var(--c-teal);border-radius:14px;padding:14px 18px;max-width:620px;',
+      '.c-undo-foryou{background:linear-gradient(135deg,rgba(57,208,216,.10),rgba(167,139,250,.08));',
+        'border:1px solid var(--c-teal);border-radius:14px;padding:14px 18px;max-width:680px;',
         'width:100%;margin:0 auto;line-height:1.6}',
       '.c-undo-foryou .t{font-weight:800;color:var(--c-teal);margin-bottom:4px;display:block;font-size:14px}',
       '.c-undo-foryou .p{font-size:14.5px;color:var(--text)}',
@@ -132,27 +273,41 @@
       '.c-undo-copy:hover{background:#272e3d;border-color:#454d5e}',
       '.c-undo-copy.ok{color:var(--c-teal);border-color:var(--c-teal)}',
 
-      /* 三栏对比（屏 4.5） */
-      '.c-undo-cmp{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;width:100%;margin-top:4px}',
-      '@media(max-width:820px){.c-undo-cmp{grid-template-columns:1fr}}',
-      '.c-undo-col{background:var(--pane);border:1px solid var(--border);border-radius:16px;',
-        'padding:16px;display:flex;flex-direction:column;gap:10px;cursor:pointer;',
-        'transition:border-color .2s var(--ease),transform .2s var(--ease),background .2s}',
-      '.c-undo-col:hover{transform:translateY(-3px);border-color:#454d5e}',
-      '.c-undo-col.active{border-color:var(--git);box-shadow:0 0 0 1px var(--git) inset,0 0 22px rgba(240,81,51,.18)}',
-      '.c-undo-col h3{font-size:17px;font-weight:800;display:flex;align-items:center;gap:8px}',
-      '.c-undo-col .pill{font-family:var(--font-mono);font-size:12px;font-weight:700;',
-        'padding:2px 8px;border-radius:6px;background:rgba(45,212,191,.14);color:var(--c-teal)}',
-      '.c-undo-col .mini{width:100%;height:96px;border-radius:10px;background:#010409;',
-        'border:1px solid var(--border);position:relative;overflow:hidden}',
-      '.c-undo-col .desc{font-size:13.5px;color:var(--dim);line-height:1.5}',
-      '.c-undo-col .desc b{color:var(--text)}',
+      /* 小字说明 */
+      '.c-undo-fine{font-size:13px;color:var(--dim);line-height:1.55;max-width:680px;margin:0 auto;text-align:center}',
+      '.c-undo-fine b{color:var(--text)}',
 
-      /* 三句口诀行 */
-      '.c-undo-three{display:flex;flex-direction:column;gap:8px;max-width:680px;margin:10px auto 0;width:100%}',
+      /* revert 两栏对比（屏 4.4） */
+      '.c-undo-rv-toggle{display:flex;gap:10px;justify-content:center;flex-wrap:wrap}',
+      '.c-undo-rv-tab{cursor:pointer;border:1px solid var(--border);background:var(--pane2);',
+        'color:var(--dim);font-size:14px;font-weight:700;border-radius:10px;padding:8px 18px;',
+        'transition:all .18s var(--ease)}',
+      '.c-undo-rv-tab.active{color:#fff;background:var(--git);border-color:var(--git)}',
+      '.c-undo-two{display:grid;grid-template-columns:1fr 1fr;gap:14px;width:100%}',
+      '@media(max-width:820px){.c-undo-two{grid-template-columns:1fr}}',
+      '.c-undo-tcol{background:var(--pane);border:1px solid var(--border);border-radius:16px;',
+        'padding:16px;display:flex;flex-direction:column;gap:10px;transition:border-color .2s var(--ease),opacity .2s}',
+      '.c-undo-tcol.dim{opacity:.4}',
+      '.c-undo-tcol.hot{border-color:var(--git);box-shadow:0 0 0 1px var(--git) inset,0 0 22px rgba(240,81,51,.16)}',
+      '.c-undo-tcol h3{font-size:16px;font-weight:800;display:flex;align-items:center;gap:8px}',
+      '.c-undo-tcol .badge{font-size:12px;font-weight:700;padding:2px 9px;border-radius:6px}',
+      '.c-undo-tcol .badge.easy{background:rgba(57,208,216,.14);color:var(--c-teal)}',
+      '.c-undo-tcol .badge.hard{background:rgba(251,191,36,.14);color:var(--c-amber)}',
+      '.c-undo-tcol p{font-size:14px;color:var(--dim);line-height:1.6}',
+      '.c-undo-tcol p b{color:var(--text)}',
+      '.c-undo-tcol .talk{font-family:var(--font-mono);font-size:13px;color:var(--c-teal);',
+        'background:#010409;border:1px solid var(--border);border-radius:9px;padding:8px 11px;line-height:1.5}',
+
+      /* 三句口诀行（屏 4.5） */
+      '.c-undo-three{display:flex;flex-direction:column;gap:8px;max-width:700px;margin:10px auto 0;width:100%}',
       '.c-undo-three .row{display:flex;align-items:baseline;gap:10px;font-size:15.5px;line-height:1.5}',
       '.c-undo-three .k{font-family:var(--font-mono);font-weight:800;color:var(--git);min-width:74px}',
       '.c-undo-three .v b{color:var(--c-teal)}',
+      '.c-undo-three .v .soft{color:var(--dim);font-size:13px}',
+
+      /* 两人并排 */
+      '.c-undo-duo{display:flex;align-items:flex-end;justify-content:center;gap:30px;',
+        'padding:6px 0 2px}',
 
       '.c-undo-quote-wrap{text-align:center;margin:14px auto 0;max-width:760px}',
 
@@ -160,30 +315,21 @@
       '.c-undo-tease{max-width:720px;width:100%;margin:6px auto 0;background:rgba(167,139,250,.08);',
         'border:1px dashed var(--c-purple);border-radius:14px;padding:14px 18px;',
         'color:var(--text);font-size:14.5px;line-height:1.6;text-align:center}',
-      '.c-undo-tease b{color:var(--c-purple)}',
-
-      '.c-undo-foot{display:flex;align-items:center;gap:14px;flex-wrap:wrap;',
-        'border-top:1px solid var(--border);padding-top:12px;margin-top:4px}',
-      '.c-undo-hint{font-size:13px;color:var(--dim)}'
+      '.c-undo-tease b{color:var(--c-purple)}'
     ].join('');
     document.head.appendChild(st);
   }
 
   /* ------------------------------------------------------------
      共用：在裸线上自绘 hash 小标 + 「你在这一版」标记。
-     用 getNodeXY(页面坐标) 反算到画布卡内部坐标，绝对定位覆盖。
-     —— 这样无论框架那侧 hashes/here 是否已画，屏上显示的 hash
-        都与「对 AI 说」框里的字符串一字不差。
-     需在布局稳定后调用（rAF + 轻量重试）。
      ------------------------------------------------------------ */
   function decorate(canvas, g, ids, hereId, opts) {
     opts = opts || {};
-    // 清掉旧覆盖层（幂等）
     var old = canvas.querySelectorAll('.c-undo-haslayer,.c-undo-here');
     for (var i = 0; i < old.length; i++) { old[i].parentNode.removeChild(old[i]); }
 
     var rect = canvas.getBoundingClientRect();
-    if (!rect.width) return; // 还没布局，跳过（resize/replay 会再来）
+    if (!rect.width) return;
 
     var layer = el('div', 'c-undo-haslayer');
     var placedAny = false;
@@ -194,8 +340,6 @@
       var lx = xy.x - rect.left;
       var ly = xy.y - rect.top;
       placedAny = true;
-
-      // hash 小标：放在节点下方
       var cap = el('div', 'c-undo-hcap', HASH[id] || id);
       cap.style.left = lx + 'px';
       cap.style.top = (ly + 24) + 'px';
@@ -205,7 +349,6 @@
     if (!placedAny) return;
     canvas.appendChild(layer);
 
-    // 「你在这一版」标记
     if (hereId) {
       var hxy = g.getNodeXY(hereId);
       if (hxy) {
@@ -218,7 +361,6 @@
     }
   }
 
-  /* 布局稳定后再装饰（rAF 两帧 + 一次 80ms 兜底，覆盖首帧 viewBox 还没定的情况） */
   function decorateSoon(canvas, g, ids, hereId, opts) {
     function run() { try { decorate(canvas, g, ids, hereId, opts); } catch (e) {} }
     requestAnimationFrame(function () { requestAnimationFrame(run); });
@@ -252,14 +394,37 @@
     });
   }
 
+  /* 一团「还没保存的乱改」抖动小方块（可复用） */
+  function makeMess(label) {
+    var mess = el('div', 'c-undo-mess');
+    if (label) { mess.appendChild(el('div', 'tag', label)); }
+    var POS = [[16, 12], [30, 4], [6, 22], [24, 26], [12, 2]];
+    POS.forEach(function (p, i) {
+      var b = el('div', 'c-undo-blk');
+      b.style.left = p[0] + 'px';
+      b.style.top = p[1] + 'px';
+      b.style.animationDelay = (i * 0.13) + 's';
+      mess.appendChild(b);
+    });
+    mess.appendChild(el('div', 'c-undo-clean', '✓ 没了'));
+    return mess;
+  }
+
+  /* 简易笔记本电脑（你坐它前面） */
+  function makeLaptop() {
+    var lap = el('div', 'c-undo-laptop');
+    lap.innerHTML = '<div class="scr"></div><div class="base"></div>';
+    return lap;
+  }
+
   /* ============================================================
-     屏 4.1 — 你的提交历史就是一条线 + 用 hash 指认版本
+     屏 4.1 — undo-line：你的项目就是一条提交线 + 用 hash 指认版本
      ============================================================ */
   register({
     chapter: CH,
     chapterName: CHNAME,
     id: 'undo-line',
-    title: '你的提交历史就是一条线',
+    title: '你的项目就是一条提交线',
     subtitle: '每个版本都有自己的 hash，用它和 AI 指认',
     render: function (stage, api) {
       injectCSS();
@@ -268,12 +433,12 @@
       stage.appendChild(wrap);
 
       var head = el('div', 'c-undo-head');
-      head.appendChild(el('span', 'sc-pill', '💊 三颗后悔药'));
+      head.appendChild(el('span', 'sc-pill', '💊 后悔药'));
       head.appendChild(el('h2', 'sc-h2',
-        '你的提交历史，就是<span style="color:var(--git)">一条按时间排开的线</span>'));
+        '你的项目，就是<span style="color:var(--git)">一条按时间排开的提交线</span>'));
       head.appendChild(el('p', 'sc-p c-undo-lead',
-        '到目前为止，你的项目就是这样<b>一条按时间排开的提交线</b>。' +
-        '每个点都是你保存过的一个版本，每个点都有自己的 <span class="c-undo-mono">hash</span>。'));
+        '你的项目就是这样<b>一条按时间排开的提交线</b>，每个点都是你保存过的一个版本，' +
+        '每个点都有自己的 <span class="c-undo-mono">hash</span>。'));
       wrap.appendChild(head);
 
       var canvas = el('div', 'sc-card c-undo-canvas');
@@ -283,11 +448,10 @@
       var IDS = ['A', 'B', 'C', 'D'];
       g.init('main', IDS, { bare: true, hashes: true, here: true });
 
-      // 自绘 hash 小标 + 「你现在在这一版」
       var hereTxt = '你现在在这一版';
       decorateSoon(canvas, g, IDS, 'D', { hereText: hereTxt });
 
-      // 自做的「对 AI 说」复制框（随点击更新）
+      // 自做的「对 AI 说」复制框
       var sayBox = el('div', 'c-undo-saybox');
       sayBox.setAttribute('data-interactive', '1');
       sayBox.innerHTML =
@@ -300,10 +464,8 @@
       wireCopy(copyBtn, function () { return currentSay; });
       wrap.appendChild(sayBox);
 
-      // 点击任意点 → 高亮它 + 生成话术
       function pick(id) {
         IDS.forEach(function (x) { try { g.highlight(x, x === id); } catch (e) {} });
-        // highlight 触发 _render，覆盖层要重画
         decorateSoon(canvas, g, IDS, 'D', { hereText: hereTxt });
         var h = HASH[id];
         currentSay = '我说的是 ' + h + ' 这一版';
@@ -313,7 +475,6 @@
         copyBtn.style.cursor = 'pointer';
       }
 
-      // 点击命中：用 getNodeXY 反查最近的点
       canvas.addEventListener('click', function (e) {
         var rect = canvas.getBoundingClientRect();
         var px = e.clientX, py = e.clientY;
@@ -326,18 +487,17 @@
           if (d < bestD) { bestD = d; best = id; }
         });
         if (best && bestD < 44 * 44) {
-          e.stopPropagation(); // 别让点击翻页
+          e.stopPropagation();
           pick(best);
         }
       }, true);
 
-      // 讲解锚点（帧揭示）
       var anchor = el('div', 'c-undo-foryou');
       anchor.innerHTML =
         '<span class="t">📌 记住这一点</span>' +
-        '<span class="p">接下来三颗后悔药，本质都是一句话：' +
-        '<b>「我想回到 / 撤销某一版」</b>。你要做的，就是用 <span style="color:var(--c-teal);font-family:var(--font-mono)">hash</span> ' +
-        '告诉 AI 是哪一版。hash，就是你和 AI 之间指认版本的通用代号。</span>';
+        '<span class="p">接下来的后悔药，本质都是『<b>回到 / 撤销某一版</b>』。' +
+        '你要做的，就是用 <span style="color:var(--c-teal);font-family:var(--font-mono)">hash</span> ' +
+        '告诉 AI 是哪一版——hash，就是你和 AI 之间指认版本的通用代号。</span>';
       api.frag(anchor);
       wrap.appendChild(anchor);
 
@@ -352,14 +512,14 @@
   });
 
   /* ============================================================
-     屏 4.2 — 后悔药① discard：还没保存的，直接丢
+     屏 4.2 — undo-discard：三格漫画（你搞幺蛾子 → 王琦抢电脑 → discard）
      ============================================================ */
   register({
     chapter: CH,
     chapterName: CHNAME,
     id: 'undo-discard',
-    title: '后悔药① discard',
-    subtitle: '还没保存的改动，直接丢掉',
+    title: '后悔药① discard（漫画）',
+    subtitle: '还没保存的改动，王琦一键丢掉',
     play: true,
     render: function (stage, api) {
       injectCSS();
@@ -371,133 +531,148 @@
       head.appendChild(el('span', 'sc-pill', '💊① discard'));
       head.appendChild(el('h2', 'sc-h2',
         '后悔药① <span style="color:var(--git)">discard</span>：还没保存的，直接丢'));
+      head.appendChild(el('p', 'sc-p c-undo-lead',
+        '<span class="me">你</span>又在憋坏，<span class="wq">王琦</span>出手收拾——三格漫画，点按钮往下推。'));
       wrap.appendChild(head);
 
-      // 场景故事
-      var story = el('p', 'sc-p c-undo-lead');
-      story.innerHTML =
-        '你在写一篇活动推文，上一次提交已经基本写完了。这次你打开嘉宾 <span class="wq">王琦</span> 的人物介绍，' +
-        '正准备给他加点幺蛾子——<b class="bad">还没保存提交</b>。结果王琦从背后探头，发现你在憋坏，' +
-        '一把抢过电脑，啪地一个 <span class="c-undo-mono">discard</span>。' +
-        '你这次<b>还没保存的改动，全没了</b>。';
-      wrap.appendChild(story);
+      /* ---- 三格漫画 ---- */
+      var comic = el('div', 'c-undo-comic');
+      wrap.appendChild(comic);
 
+      // 格1：你坐电脑前坏笑，给王琦简介加幺蛾子，屏上一团没保存的乱改
+      var p1 = el('div', 'c-undo-panel pending');
+      p1.appendChild(el('div', 'pnum', '格 1'));
+      var st1 = el('div', 'stagea');
+      var youSmirk = makePerson('你', { mood: 'smirk' });
+      st1.appendChild(youSmirk);
+      st1.appendChild(makeLaptop());
+      var mess1 = makeMess('还没保存的乱改');
+      st1.appendChild(mess1);
+      p1.appendChild(st1);
+      var bb1 = el('div', 'bubbox');
+      bb1.appendChild(speech('你', '嘿嘿，给王琦的简介加点<b>幺蛾子</b>……'));
+      p1.appendChild(bb1);
+      comic.appendChild(p1);
+
+      // 格2：王琦从背后探头瞪眼，一把抢过电脑
+      var p2 = el('div', 'c-undo-panel pending');
+      p2.appendChild(el('div', 'pnum', '格 2'));
+      var st2 = el('div', 'stagea');
+      st2.appendChild(makePerson('你', { mood: 'calm' }));
+      st2.appendChild(makePerson('王琦', { mood: 'angry', flip: true }));
+      p2.appendChild(st2);
+      var bb2 = el('div', 'bubbox');
+      bb2.appendChild(speech('王琦', '你在干嘛！'));
+      p2.appendChild(bb2);
+      comic.appendChild(p2);
+
+      // 格3：王琦点 discard，那团乱改「啪」消失，回到上次保存的样子
+      var p3 = el('div', 'c-undo-panel pending');
+      p3.appendChild(el('div', 'pnum', '格 3'));
+      var st3 = el('div', 'stagea');
+      st3.appendChild(makePerson('王琦', { mood: 'calm' }));
+      var mess3 = makeMess('还没保存的乱改');
+      st3.appendChild(mess3);
+      p3.appendChild(st3);
+      var bb3 = el('div', 'bubbox');
+      bb3.appendChild(speech('王琦', '还没提交吧？没了。'));
+      p3.appendChild(bb3);
+      comic.appendChild(p3);
+
+      var panels = [p1, p2, p3];
+
+      // 提交线：始终纹丝不动
       var canvas = el('div', 'sc-card c-undo-canvas');
       wrap.appendChild(canvas);
-
       var g = api.graph(canvas, {});
       var IDS = ['A', 'B', 'C', 'D'];
       g.init('main', IDS, { bare: true, hashes: true, here: true });
+      decorateSoon(canvas, g, IDS, 'D', { hereText: '你在这一版' });
 
-      // 在 D 旁边漂一团「未提交的乱改」
-      var mess = el('div', 'c-undo-mess');
-      mess.innerHTML = '<div class="tag">未保存的乱改</div>';
-      // 5 个抖动小方块，随机错落
-      var POS = [[0, 0], [16, -10], [-14, 6], [10, 14], [-6, -16]];
-      POS.forEach(function (p, i) {
-        var b = el('div', 'c-undo-blk');
-        b.style.left = (p[0]) + 'px';
-        b.style.top = (p[1]) + 'px';
-        b.style.animationDelay = (i * 0.13) + 's';
-        mess.appendChild(b);
-      });
-      canvas.appendChild(mess);
-
-      var IDS_HERE = 'D';
-      function placeMess() {
-        var rect = canvas.getBoundingClientRect();
-        var xy = g.getNodeXY('D');
-        if (rect.width && xy) {
-          mess.style.left = (xy.x - rect.left + 48) + 'px';
-          mess.style.top = (xy.y - rect.top + 4) + 'px';
-        }
-      }
-      function redraw() {
-        decorate(canvas, g, IDS, IDS_HERE, { hereText: '你在这一版' });
-        placeMess();
-      }
-      function redrawSoon() {
-        requestAnimationFrame(function () { requestAnimationFrame(redraw); });
-        setTimeout(redraw, 90); setTimeout(redraw, 260);
-      }
-      redrawSoon();
+      var lineNote = el('div', 'c-undo-fine');
+      lineNote.innerHTML = '提交线<b>纹丝不动</b>——丢掉的只是「还没保存」的那团乱改。';
+      wrap.appendChild(lineNote);
 
       var discarded = false;
+
+      // 逐格推进：用 api.step
+      function lightPanel(i) {
+        panels.forEach(function (p, k) {
+          p.classList.toggle('pending', k > i);
+          p.classList.toggle('live', k === i);
+        });
+      }
       function doDiscard(animated) {
         discarded = true;
-        if (!animated) { mess.style.transition = 'none'; }
-        mess.classList.add('gone');
-        // D「干净复位」光效
-        if (animated) {
-          var rect = canvas.getBoundingClientRect();
-          var xy = g.getNodeXY('D');
-          if (rect.width && xy) {
-            var ring = el('div', 'c-undo-cleanring');
-            ring.style.left = (xy.x - rect.left) + 'px';
-            ring.style.top = (xy.y - rect.top) + 'px';
-            canvas.appendChild(ring);
-            setTimeout(function () { if (ring.parentNode) ring.parentNode.removeChild(ring); }, 850);
-          }
+        if (!animated) { mess3.style.transition = 'none'; mess1.style.transition = 'none'; }
+        mess3.classList.add('gone');
+        mess1.classList.add('gone');
+        var ck3 = p3.querySelector('.c-undo-clean');
+        if (ck3) ck3.classList.add('show');
+        if (!animated) {
+          void mess3.offsetWidth; mess3.style.transition = '';
+          void mess1.offsetWidth; mess1.style.transition = '';
         }
-        if (!animated) { void mess.offsetWidth; mess.style.transition = ''; }
-        btn.disabled = true; btn.style.opacity = '.5'; btn.textContent = '✓ 已丢弃，回到干净的这一版';
+        btn.disabled = true; btn.style.opacity = '.5';
+        btn.textContent = '✓ 已丢掉，回到上次保存的样子';
       }
 
+      // step1: 点亮格1  step2: 点亮格2  step3: 点亮格3 + 执行 discard
+      api.step(function () { lightPanel(0); });
+      api.step(function () { lightPanel(1); });
+      api.step(function (animated) { lightPanel(2); doDiscard(animated); });
+
       var actions = el('div', 'c-undo-actions');
-      var btn = el('button', 'sc-btn primary', '把还没提交的改动丢弃');
+      var btn = el('button', 'sc-btn primary', '王琦：丢掉这些没保存的改动');
       btn.setAttribute('data-interactive', '1');
-      btn.addEventListener('click', function (e) { e.stopPropagation(); if (!discarded) { doDiscard(true); } });
+      btn.addEventListener('click', function (e) {
+        e.stopPropagation();
+        // 一键把三格走完
+        lightPanel(2);
+        if (!discarded) { doDiscard(true); }
+      });
       actions.appendChild(btn);
       wrap.appendChild(actions);
 
-      // step：键盘流也能演示
-      api.step(function (animated) { doDiscard(animated); });
-
-      // aiCard
       var aiHolder = el('div', 'c-undo-ai');
       aiHolder.appendChild(api.aiCard({
-        effect: '把还没提交的改动直接扔掉，回到上一次提交的样子；已提交的历史完全不动',
-        say: '把我没提交的改动全撤了',
+        effect: '把还没提交的改动全部丢掉，回到上次保存的样子',
+        say: '把我没提交的改动都还原了',
         cmd: 'git restore .'
       }));
       api.frag(aiHolder);
       wrap.appendChild(aiHolder);
 
-      // 「对你来说」小卡
-      var foryou = el('div', 'c-undo-foryou');
-      foryou.innerHTML =
-        '<span class="t">💡 对你来说</span>' +
-        '<span class="p">AI 一通乱改、还<b>没保存提交</b>，把项目改崩了——' +
-        '一键 discard 回到上次能跑的存档，比让它一条条撤又快又稳。</span>';
-      api.frag(foryou);
-      wrap.appendChild(foryou);
-
-      // 强调：历史线一点没动
-      var note = el('div', 'sc-warn-banner');
-      note.style.maxWidth = '620px'; note.style.margin = '0 auto';
-      note.textContent = '注意：那条提交线一个点都没动——丢掉的只是「还没保存」的那团乱改。';
-      api.frag(note);
-      wrap.appendChild(note);
+      var fine = el('div', 'c-undo-fine');
+      fine.innerHTML = 'discard = 丢掉「还没 commit」的改动，<b>已提交的历史一点不动</b>。' +
+        '（日常：AI 乱改还没提交、一键还原。）';
+      api.frag(fine);
+      wrap.appendChild(fine);
 
       api.onReset(function () {
         discarded = false;
-        mess.style.transition = 'none';
-        mess.classList.remove('gone');
-        void mess.offsetWidth; mess.style.transition = '';
-        btn.disabled = false; btn.style.opacity = '1'; btn.textContent = '把还没提交的改动丢弃';
-        redrawSoon();
+        [mess1, mess3].forEach(function (m) {
+          m.style.transition = 'none';
+          m.classList.remove('gone');
+          void m.offsetWidth; m.style.transition = '';
+        });
+        var ck3 = p3.querySelector('.c-undo-clean');
+        if (ck3) ck3.classList.remove('show');
+        panels.forEach(function (p) { p.classList.add('pending'); p.classList.remove('live'); });
+        btn.disabled = false; btn.style.opacity = '1'; btn.textContent = '王琦：丢掉这些没保存的改动';
+        decorateSoon(canvas, g, IDS, 'D', { hereText: '你在这一版' });
       });
     }
   });
 
   /* ============================================================
-     屏 4.3 — 后悔药② reset：已经保存了，整个退回去
+     屏 4.3 — undo-reset：漫画（你先存了丑照 → 王琦气炸 → reset 回 C）
      ============================================================ */
   register({
     chapter: CH,
     chapterName: CHNAME,
     id: 'undo-reset',
-    title: '后悔药② reset',
+    title: '后悔药② reset（漫画）',
     subtitle: '已经提交了，把项目整个退回某一版',
     play: true,
     render: function (stage, api) {
@@ -510,15 +685,53 @@
       head.appendChild(el('span', 'sc-pill', '💊② reset'));
       head.appendChild(el('h2', 'sc-h2',
         '后悔药② <span style="color:var(--git)">reset</span>：已经保存了，整个退回去'));
+      head.appendChild(el('p', 'sc-p c-undo-lead',
+        '这次<span class="me">你</span>手快，<b class="bad">先存了再说</b>；<span class="wq">王琦</span>看到立刻收拾。'));
       wrap.appendChild(head);
 
-      var story = el('p', 'sc-p c-undo-lead');
-      story.innerHTML =
-        '这次你手快，已经把「上传王琦丑照」这次改动<b class="bad">提交</b>了。' +
-        '<span class="wq">王琦</span>看到，雷霆大怒，直接把你的仓库 <span class="c-undo-mono">reset</span> ' +
-        '到上一张没有丑照的历史版本——丑照那次提交、连同它之后的东西，<b>一起没了</b>。';
-      wrap.appendChild(story);
+      /* ---- 三格漫画 ---- */
+      var comic = el('div', 'c-undo-comic');
+      wrap.appendChild(comic);
 
+      // 格1：你手快，已把「上传王琦丑照」commit 了（D）
+      var p1 = el('div', 'c-undo-panel pending');
+      p1.appendChild(el('div', 'pnum', '格 1'));
+      var st1 = el('div', 'stagea');
+      st1.appendChild(makePerson('你', { mood: 'smirk' }));
+      st1.appendChild(makeLaptop());
+      st1.appendChild(el('div', '', '<span style="font-size:30px">📷</span>'));
+      p1.appendChild(st1);
+      var bb1 = el('div', 'bubbox');
+      bb1.appendChild(speech('你', '这次<b>先存了再说</b>！丑照上传搞定～'));
+      p1.appendChild(bb1);
+      comic.appendChild(p1);
+
+      // 格2：王琦看到 D 气炸
+      var p2 = el('div', 'c-undo-panel pending');
+      p2.appendChild(el('div', 'pnum', '格 2'));
+      var st2 = el('div', 'stagea');
+      st2.appendChild(makePerson('王琦', { mood: 'shout' }));
+      st2.appendChild(el('div', '', '<span style="font-size:30px">📷</span>'));
+      p2.appendChild(st2);
+      var bb2 = el('div', 'bubbox');
+      bb2.appendChild(speech('王琦', '这张照片<b>给我撤了</b>！'));
+      p2.appendChild(bb2);
+      comic.appendChild(p2);
+
+      // 格3：王琦 reset 回 C，「你在这一版」落到 C
+      var p3 = el('div', 'c-undo-panel pending');
+      p3.appendChild(el('div', 'pnum', '格 3'));
+      var st3 = el('div', 'stagea');
+      st3.appendChild(makePerson('王琦', { mood: 'calm' }));
+      p3.appendChild(st3);
+      var bb3 = el('div', 'bubbox');
+      bb3.appendChild(speech('王琦', '退回到没丑照那版，干净了。'));
+      p3.appendChild(bb3);
+      comic.appendChild(p3);
+
+      var panels = [p1, p2, p3];
+
+      /* ---- 提交线：A—B—C—D（D 标丑照），reset 后缩回 A—B—C ---- */
       var canvas = el('div', 'sc-card c-undo-canvas');
       wrap.appendChild(canvas);
 
@@ -526,81 +739,114 @@
       var FULL = ['A', 'B', 'C', 'D']; // D = 丑照那次
       var BACK = ['A', 'B', 'C'];      // reset 后
 
-      var reset = false;
-      function build(after, animated) {
+      function build(after) {
         g.reset();
         var ids = after ? BACK : FULL;
         var here = after ? 'C' : 'D';
         g.init('main', ids, { bare: true, hashes: true, here: true });
-        if (!after) {
-          // 把 D 高亮成「丑照」坏点
-          try { g.highlight('D', true); } catch (e) {}
-        }
+        if (!after) { try { g.highlight('D', true); } catch (e) {} }
         decorateSoon(canvas, g, ids, here, { hereText: '你在这一版' });
-        return here;
       }
-      build(false, false);
+      build(false);
 
-      var hintBanner = el('div', 'sc-warn-banner');
-      hintBanner.style.maxWidth = '640px'; hintBanner.style.margin = '0 auto';
-      hintBanner.textContent = 'D（丑照那次提交）之后的东西，reset 之后都被丢弃了——线缩回到 C 这一版。';
+      // D 旁的「丑照📷」标
+      var dTag = el('div', 'c-undo-haslayer');
+      dTag.style.zIndex = '4';
+      var dCap = el('div', 'c-undo-hcap');
+      dCap.style.color = 'var(--git)';
+      dCap.style.fontWeight = '800';
+      dCap.style.fontFamily = 'var(--font-sans)';
+      dCap.textContent = '丑照📷';
+      dTag.appendChild(dCap);
+      function placeDTag() {
+        if (reset) { dCap.style.display = 'none'; return; }
+        dCap.style.display = '';
+        var rect = canvas.getBoundingClientRect();
+        var xy = g.getNodeXY('D');
+        if (rect.width && xy) {
+          dCap.style.left = (xy.x - rect.left) + 'px';
+          dCap.style.top = (xy.y - rect.top - 44) + 'px';
+        }
+      }
+      canvas.appendChild(dTag);
+      function placeDTagSoon() {
+        requestAnimationFrame(function () { requestAnimationFrame(placeDTag); });
+        setTimeout(placeDTag, 100); setTimeout(placeDTag, 280);
+      }
+      placeDTagSoon();
+
+      var hintBanner = el('div', 'c-undo-fine');
+      hintBanner.innerHTML = 'D（丑照那次）之后的东西，reset 之后都<b>没了</b>——线缩回到 C 这一版。';
       hintBanner.style.display = 'none';
       wrap.appendChild(hintBanner);
 
-      function doReset(animated) {
+      var reset = false;
+      function lightPanel(i) {
+        panels.forEach(function (p, k) {
+          p.classList.toggle('pending', k > i);
+          p.classList.toggle('live', k === i);
+        });
+      }
+      function doReset() {
         if (reset) return;
         reset = true;
-        build(true, animated);
+        build(true);
+        placeDTagSoon();
         hintBanner.style.display = '';
-        btn.disabled = true; btn.style.opacity = '.5'; btn.textContent = '✓ 已退回到 ' + HASH.C + ' 这一版';
+        btn.disabled = true; btn.style.opacity = '.5';
+        btn.textContent = '✓ 已退回到 ' + HASH.C + ' 这一版';
       }
 
+      api.step(function () { lightPanel(0); });
+      api.step(function () { lightPanel(1); });
+      api.step(function () { lightPanel(2); doReset(); });
+
       var actions = el('div', 'c-undo-actions');
-      var btn = el('button', 'sc-btn primary', '把仓库退回到 ' + HASH.C + ' 这一版（没丑照的那张）');
+      var btn = el('button', 'sc-btn primary', '王琦：退回到没丑照的 C 版（' + HASH.C + '）');
       btn.setAttribute('data-interactive', '1');
-      btn.addEventListener('click', function (e) { e.stopPropagation(); doReset(true); });
+      btn.addEventListener('click', function (e) {
+        e.stopPropagation();
+        lightPanel(2); doReset();
+      });
       actions.appendChild(btn);
       wrap.appendChild(actions);
 
-      api.step(function (animated) { doReset(animated); });
-
       var aiHolder = el('div', 'c-undo-ai');
       aiHolder.appendChild(api.aiCard({
-        effect: '让项目整个退回到某个历史提交的状态，那个点之后的提交都被丢弃',
-        say: '帮我 reset 到 ' + HASH.C + '（没丑照的那一版）',
+        effect: '项目整个退回到某个历史版本，那之后的提交都丢弃',
+        say: '帮我 reset 到 ' + HASH.C + '（没丑照那版）',
         cmd: 'git reset --hard ' + HASH.C
       }));
       api.frag(aiHolder);
       wrap.appendChild(aiHolder);
 
-      var foryou = el('div', 'c-undo-foryou');
-      foryou.innerHTML =
-        '<span class="t">💡 对你来说</span>' +
-        '<span class="p">最近几次提交是死路，想<b>整个放弃、回到能跑的版本</b>——reset 一步到位。' +
-        '记住它的脾气：退回去之后，<b>后面的提交就不要了</b>。</span>';
-      api.frag(foryou);
-      wrap.appendChild(foryou);
+      var fine = el('div', 'c-undo-fine');
+      fine.innerHTML = 'reset = 退回某个历史版本，那之后的提交都被丢弃。' +
+        '（日常：最近几步走死了，整个退回能跑的那版。）';
+      api.frag(fine);
+      wrap.appendChild(fine);
 
       api.onReset(function () {
         reset = false;
-        build(false, false);
+        build(false);
+        placeDTagSoon();
         hintBanner.style.display = 'none';
+        panels.forEach(function (p) { p.classList.add('pending'); p.classList.remove('live'); });
         btn.disabled = false; btn.style.opacity = '1';
-        btn.textContent = '把仓库退回到 ' + HASH.C + ' 这一版（没丑照的那张）';
+        btn.textContent = '王琦：退回到没丑照的 C 版（' + HASH.C + '）';
       });
     }
   });
 
   /* ============================================================
-     屏 4.4 — 后悔药③ revert：生米煮成熟饭，只挑那一次撤掉
+     屏 4.4 — undo-revert：降级为一屏，诚实说明日常用不上
      ============================================================ */
   register({
     chapter: CH,
     chapterName: CHNAME,
     id: 'undo-revert',
-    title: '后悔药③ revert',
-    subtitle: '只精准撤掉指定那一次，后面的全留着',
-    play: true,
+    title: '第三颗药 revert（了解即可）',
+    subtitle: '记住它存在——等项目复杂到要精确拆弹再说',
     render: function (stage, api) {
       injectCSS();
 
@@ -610,99 +856,78 @@
       var head = el('div', 'c-undo-head');
       head.appendChild(el('span', 'sc-pill', '💊③ revert'));
       head.appendChild(el('h2', 'sc-h2',
-        '后悔药③ <span style="color:var(--git)">revert</span>：只挑那一次撤掉'));
+        '还有第三颗药叫 <span style="color:var(--git)">revert</span>'));
+      head.appendChild(el('p', 'sc-p c-undo-lead',
+        '它在最新版后面加一次『<b>反向提交</b>』，专门撤掉历史里某一次的改动、<b>其他全留着</b>。' +
+        '——但说实话，它不是你日常会主动用的，先看看下面这两栏对比。'));
       wrap.appendChild(head);
 
-      var story = el('p', 'sc-p c-undo-lead');
-      story.innerHTML =
-        '可这次生米早煮成熟饭了——丑照那次提交（<span class="c-undo-mono">' + HASH.B + '</span>）是<b>很久以前</b>提交的，' +
-        '之后你又写了一大堆新内容、提交了好多次。如果像上次那样 reset 回没丑照的版本，' +
-        '后面那一大段辛苦劳动<b class="bad">全得陪葬</b>。善良的<span class="wq">王琦</span>不忍心，他想：' +
-        '能不能<b>只把那张丑照撤掉，你后面写的全留着</b>？这就是 <span class="c-undo-mono">revert</span>。';
-      wrap.appendChild(story);
+      // 切换
+      var toggle = el('div', 'c-undo-rv-toggle');
+      var tabSimple = el('button', 'c-undo-rv-tab active', '简单项目');
+      var tabComplex = el('button', 'c-undo-rv-tab', '复杂项目');
+      tabSimple.setAttribute('data-interactive', '1');
+      tabComplex.setAttribute('data-interactive', '1');
+      toggle.appendChild(tabSimple); toggle.appendChild(tabComplex);
+      wrap.appendChild(toggle);
 
-      var canvas = el('div', 'sc-card c-undo-canvas');
-      wrap.appendChild(canvas);
+      // 两栏
+      var two = el('div', 'c-undo-two');
+      var colSimple = el('div', 'c-undo-tcol hot');
+      colSimple.innerHTML =
+        '<h3>🟢 简单项目 <span class="badge easy">不用 revert</span></h3>' +
+        '<p>你<b>根本不用去翻 hash</b> 来 revert——直接把需求说给 AI，在最新版上改就行。' +
+        '「把王琦的丑照换成正常照片」，<b>一句话的事</b>。</p>' +
+        '<div class="talk">「把王琦的丑照换成正常照片」</div>';
+      var colComplex = el('div', 'c-undo-tcol dim');
+      colComplex.innerHTML =
+        '<h3>🟡 复杂项目 <span class="badge hard">才用 revert</span></h3>' +
+        '<p>项目大了、怕 AI 一改<b>动到别处</b>，才需要指哪打哪——精确告诉它' +
+        '「只撤 <span class="c-undo-mono">a1b2c3d</span> 这次的改动，别碰其他」，' +
+        '这时 revert 才<b>真派上用场</b>。</p>' +
+        '<div class="talk">「只撤掉 a1b2c3d 这次的改动，别碰其他」</div>';
+      two.appendChild(colSimple); two.appendChild(colComplex);
+      wrap.appendChild(two);
 
-      var g = api.graph(canvas, {});
-      var BASE = ['A', 'B', 'C', 'D', 'E']; // B = 丑照（埋中间）；C/D/E = 辛苦劳动
-      var WITH_F = ['A', 'B', 'C', 'D', 'E', 'F']; // F = 反向提交
-
-      var reverted = false;
-      function build(withF, animated) {
-        g.reset();
-        var ids = withF ? WITH_F : BASE;
-        var here = withF ? 'F' : 'E';
-        g.init('main', ids, { bare: true, hashes: true, here: here ? true : true });
-        // 坏点 B 始终高亮
-        try { g.highlight('B', true); } catch (e) {}
-        if (withF) { try { g.highlight('F', true); } catch (e) {} }
-        decorateSoon(canvas, g, ids, here, { hereText: '你在这一版' });
-        return here;
+      function selectTab(which) {
+        var simple = (which === 'simple');
+        tabSimple.classList.toggle('active', simple);
+        tabComplex.classList.toggle('active', !simple);
+        colSimple.classList.toggle('hot', simple);
+        colSimple.classList.toggle('dim', !simple);
+        colComplex.classList.toggle('hot', !simple);
+        colComplex.classList.toggle('dim', simple);
       }
-      build(false, false);
-
-      // F 的注解（撤掉后出现）
-      var fNote = el('div', 'sc-warn-banner');
-      fNote.style.maxWidth = '700px'; fNote.style.margin = '0 auto';
-      fNote.innerHTML = '末尾新长出的 ' + HASH.F + ' ＝把 ' + HASH.B +
-        ' 的改动反着做一遍，专门抵消那张丑照。B、C、D、E 全保留——历史没删，后面劳动全在，只是末尾多了一次反向提交。';
-      fNote.style.display = 'none';
-      wrap.appendChild(fNote);
-
-      function doRevert(animated) {
-        if (reverted) return;
-        reverted = true;
-        build(true, animated);
-        fNote.style.display = '';
-        btn.disabled = true; btn.style.opacity = '.5'; btn.textContent = '✓ 已撤掉 ' + HASH.B + '（末尾长出抵消点 ' + HASH.F + '）';
-      }
-
-      var actions = el('div', 'c-undo-actions');
-      var btn = el('button', 'sc-btn primary', '只撤掉 ' + HASH.B + ' 这次提交（那张丑照）');
-      btn.setAttribute('data-interactive', '1');
-      btn.addEventListener('click', function (e) { e.stopPropagation(); doRevert(true); });
-      actions.appendChild(btn);
-      wrap.appendChild(actions);
-
-      api.step(function (animated) { doRevert(animated); });
+      tabSimple.addEventListener('click', function (e) { e.stopPropagation(); selectTab('simple'); });
+      tabComplex.addEventListener('click', function (e) { e.stopPropagation(); selectTab('complex'); });
 
       var aiHolder = el('div', 'c-undo-ai');
       aiHolder.appendChild(api.aiCard({
-        effect: '不丢后面的提交，在末尾新增一次反向提交，精准抵消掉你指定的那一次提交',
-        say: '帮我 revert 掉 ' + HASH.B + ' 这次提交（那张丑照）',
-        cmd: 'git revert ' + HASH.B
+        effect: '在最新版后面加一次反向提交，精准撤掉历史某一次改动',
+        say: '只撤掉 a1b2c3d 这次的改动，别碰其他',
+        cmd: 'git revert a1b2c3d'
       }));
       api.frag(aiHolder);
       wrap.appendChild(aiHolder);
 
-      var foryou = el('div', 'c-undo-foryou');
-      foryou.innerHTML =
-        '<span class="t">💡 对你来说</span>' +
-        '<span class="p">坏改动早提交了、上面还压着一堆好提交，<b>舍不得 reset</b>——' +
-        'revert 精准拆弹：只拆掉那一颗，上面盖的好东西原封不动。</span>';
-      api.frag(foryou);
-      wrap.appendChild(foryou);
+      var fine = el('div', 'c-undo-fine');
+      fine.innerHTML = 'revert <b>不是你日常会主动用的</b>——记住它存在，等项目复杂到要精确拆弹时再说。';
+      api.frag(fine);
+      wrap.appendChild(fine);
 
-      api.onReset(function () {
-        reverted = false;
-        build(false, false);
-        fNote.style.display = 'none';
-        btn.disabled = false; btn.style.opacity = '1';
-        btn.textContent = '只撤掉 ' + HASH.B + ' 这次提交（那张丑照）';
-      });
+      api.onReset(function () { selectTab('simple'); });
     }
   });
 
   /* ============================================================
-     屏 4.5 — 三颗药一图对比 + 口诀 + 轻预告
+     屏 4.5 — undo-compare：小结 + 口诀 + 轻预告（两个小人并排）
      ============================================================ */
   register({
     chapter: CH,
     chapterName: CHNAME,
     id: 'undo-compare',
-    title: '三颗药一图对比',
-    subtitle: 'discard / reset / revert · 一句话口诀',
+    title: '三颗药小结 · 口诀',
+    subtitle: 'discard / reset / revert · 说清效果，AI 帮你做',
     render: function (stage, api) {
       injectCSS();
 
@@ -710,202 +935,43 @@
       stage.appendChild(wrap);
 
       var head = el('div', 'c-undo-head');
-      head.appendChild(el('span', 'sc-pill', '🎯 三颗药对比'));
+      head.appendChild(el('span', 'sc-pill', '🎯 三颗药小结'));
       head.appendChild(el('h2', 'sc-h2',
-        '三颗后悔药，<span style="color:var(--git)">一图看懂</span>'));
-      head.appendChild(el('p', 'sc-p c-undo-lead',
-        '同一条 <span class="c-undo-mono">A—B—C—D</span> 提交线，三颗药各做各的事。点卡片看它怎么动。'));
+        '三颗后悔药，<span style="color:var(--git)">一句话记住</span>'));
       wrap.appendChild(head);
 
-      /* ---- 三栏 mini SVG 对比 ---- */
-      var SVGNS = 'http://www.w3.org/2000/svg';
-      function svg(name, attrs) {
-        var e = document.createElementNS(SVGNS, name);
-        if (attrs) for (var k in attrs) e.setAttribute(k, attrs[k]);
-        return e;
-      }
-      // mini 画一条 A B C D 线（4 点），返回 {svg, nodeX, y, append}
-      function miniLine(host, n) {
-        n = n || 4;
-        var W = 240, H = 96;
-        var s = svg('svg', { viewBox: '0 0 ' + W + ' ' + H, width: '100%', height: '100%' });
-        var y = 56, x0 = 30, gap = 50;
-        // 连线
-        var line = svg('line', { x1: x0, y1: y, x2: x0 + (n - 1) * gap, y2: y, stroke: 'var(--border)', 'stroke-width': 3 });
-        s.appendChild(line);
-        var xs = [];
-        for (var i = 0; i < n; i++) {
-          var cx = x0 + i * gap; xs.push(cx);
-          var c = svg('circle', { cx: cx, cy: y, r: 11, fill: 'var(--c-main)', stroke: '#010409', 'stroke-width': 2 });
-          c.setAttribute('data-i', i);
-          s.appendChild(c);
-        }
-        host.appendChild(s);
-        return { s: s, line: line, xs: xs, y: y, W: W, H: H, x0: x0, gap: gap };
-      }
+      // 两个小人并排
+      var duo = el('div', 'c-undo-duo');
+      duo.appendChild(makePerson('你', { mood: 'calm' }));
+      duo.appendChild(makePerson('王琦', { mood: 'calm', flip: true }));
+      wrap.appendChild(duo);
 
-      var cmp = el('div', 'c-undo-cmp');
-      wrap.appendChild(cmp);
-
-      var COLS = [
-        {
-          key: 'discard', icon: '💊①', name: 'discard', pill: '丢没保存的',
-          desc: '旁边那团<b>没保存</b>的改动被丢掉，<b>提交线一点不变</b>。'
-        },
-        {
-          key: 'reset', icon: '💊②', name: 'reset', pill: '整个退回',
-          desc: '线<b>缩回历史点</b>，后面的点<b>消失</b>。'
-        },
-        {
-          key: 'revert', icon: '💊③', name: 'revert', pill: '末尾加抵消点',
-          desc: '线末尾<b>多一个抵消点</b>，前面的全<b>保留</b>。'
-        }
-      ];
-
-      var colObjs = [];
-      COLS.forEach(function (c) {
-        var col = el('div', 'c-undo-col');
-        col.setAttribute('data-interactive', '1');
-        col.innerHTML =
-          '<h3>' + c.icon + ' <span style="color:var(--git)">' + c.name + '</span> ' +
-          '<span class="pill">' + c.pill + '</span></h3>';
-        var mini = el('div', 'mini');
-        col.appendChild(mini);
-        col.appendChild(el('div', 'desc', c.desc));
-        cmp.appendChild(col);
-
-        var L = miniLine(mini, 4);
-
-        // 各栏专属装饰元素
-        var extra = {};
-        if (c.key === 'discard') {
-          // D 旁一团没保存的小方块
-          var m = el('div');
-          m.style.position = 'absolute';
-          m.style.zIndex = '2';
-          m.style.left = '0'; m.style.top = '0';
-          mini.appendChild(m);
-          extra.mess = m;
-        }
-
-        colObjs.push({ def: c, col: col, mini: mini, L: L, extra: extra });
-      });
-
-      // 把一栏「演示」一遍（点击或自动）
-      function playCol(o, on) {
-        var L = o.L, key = o.def.key;
-        // 先复位
-        // 复位：重画 4 点线
-        resetCol(o);
-        if (!on) return;
-        if (key === 'discard') {
-          // 画一团乱改在 D 右侧，然后淡掉
-          var rect = o.mini.getBoundingClientRect();
-          var dot = L.xs[3], scale = rect.width ? rect.width / L.W : 1;
-          var mx = (dot + 16) * scale, my = L.y * scale;
-          var blkWrap = el('div');
-          blkWrap.style.position = 'absolute';
-          blkWrap.style.left = mx + 'px'; blkWrap.style.top = my + 'px';
-          blkWrap.style.transition = 'opacity .5s var(--ease),transform .5s var(--ease)';
-          for (var i = 0; i < 3; i++) {
-            var b = el('div', 'c-undo-blk');
-            b.style.left = (i * 5 - 5) + 'px'; b.style.top = (i % 2 ? -6 : 4) + 'px';
-            b.style.animationDelay = (i * 0.12) + 's';
-            blkWrap.appendChild(b);
-          }
-          o.mini.appendChild(blkWrap);
-          setTimeout(function () {
-            blkWrap.style.opacity = '0'; blkWrap.style.transform = 'scale(.3)';
-          }, 420);
-          setTimeout(function () { if (blkWrap.parentNode) blkWrap.parentNode.removeChild(blkWrap); }, 1000);
-        } else if (key === 'reset') {
-          // D 点淡出 + 线缩短
-          var nodes = o.L.s.querySelectorAll('circle');
-          var dNode = nodes[3];
-          dNode.style.transition = 'opacity .5s var(--ease),transform .5s var(--ease)';
-          dNode.style.transformOrigin = 'center';
-          requestAnimationFrame(function () {
-            dNode.style.opacity = '0';
-            dNode.style.transform = 'scale(.2) translateX(-14px)';
-          });
-          o.L.line.style.transition = 'all .5s var(--ease)';
-          o.L.line.setAttribute('x2', o.L.xs[2]);
-        } else if (key === 'revert') {
-          // 末尾长出第 5 点 F（git 橙），高亮
-          var f = svg('circle', { cx: o.L.xs[3] + o.L.gap, cy: o.L.y, r: 11, fill: 'var(--git)', stroke: '#010409', 'stroke-width': 2 });
-          f.style.opacity = '0';
-          f.style.transition = 'opacity .5s var(--ease)';
-          var fl = svg('line', { x1: o.L.xs[3], y1: o.L.y, x2: o.L.xs[3] + o.L.gap, y2: o.L.y, stroke: 'var(--git)', 'stroke-width': 3 });
-          fl.style.opacity = '0'; fl.style.transition = 'opacity .5s var(--ease)';
-          o.L.s.appendChild(fl); o.L.s.appendChild(f);
-          // 扩展 viewBox 容下第 5 点
-          o.L.s.setAttribute('viewBox', '0 0 ' + (o.L.x0 + 4 * o.L.gap + 20) + ' ' + o.L.H);
-          requestAnimationFrame(function () { f.style.opacity = '1'; fl.style.opacity = '1'; });
-        }
-      }
-
-      function resetCol(o) {
-        // 删除附加元素，重画基础线
-        var adds = o.mini.querySelectorAll('div:not(.mini)');
-        // 重建 mini 内容最简单：清空再画
-        o.mini.innerHTML = '';
-        o.L = miniLine(o.mini, 4);
-      }
-
-      var activeKey = null;
-      colObjs.forEach(function (o) {
-        o.col.addEventListener('click', function (e) {
-          e.stopPropagation();
-          // 切换：本栏激活并播放，其余复位
-          colObjs.forEach(function (x) {
-            x.col.classList.toggle('active', x === o);
-            if (x !== o) resetCol(x);
-          });
-          activeKey = o.def.key;
-          playCol(o, true);
-        });
-      });
-
-      // step：依次自动演示三栏
-      api.step(function (animated) { colObjs[0].col.classList.add('active'); playCol(colObjs[0], animated); });
-      api.step(function (animated) {
-        colObjs[0].col.classList.remove('active'); resetCol(colObjs[0]);
-        colObjs[1].col.classList.add('active'); playCol(colObjs[1], animated);
-      });
-      api.step(function (animated) {
-        colObjs[1].col.classList.remove('active'); resetCol(colObjs[1]);
-        colObjs[2].col.classList.add('active'); playCol(colObjs[2], animated);
-      });
-
-      /* ---- 三句话 ---- */
+      // 三行口诀
       var three = el('div', 'c-undo-three');
       three.innerHTML =
-        '<div class="row"><span class="k">discard</span><span class="v">丢「<b>没保存的</b>」。</span></div>' +
-        '<div class="row"><span class="k">reset</span><span class="v">「<b>整个退回、后面不要了</b>」。</span></div>' +
-        '<div class="row"><span class="k">revert</span><span class="v">「<b>留着后面、只撤指定那次</b>」。</span></div>';
+        '<div class="row"><span class="k">discard</span><span class="v">还没保存的，<b>丢掉</b>。</span></div>' +
+        '<div class="row"><span class="k">reset</span><span class="v">已经保存了，<b>整个退回去</b>。</span></div>' +
+        '<div class="row"><span class="k">revert</span><span class="v"><b>只撤历史里某一次</b> <span class="soft">（复杂项目才用）</span>。</span></div>';
       api.frag(three);
       wrap.appendChild(three);
 
-      /* ---- 口诀（文楷金句） ---- */
+      // 文楷金句
       var qw = el('div', 'c-undo-quote-wrap');
       qw.innerHTML =
         '<div class="sc-quote big">你不用记它们底层怎么实现，<br>' +
-        '你只要说清<span class="accent">『我想要的效果』</span>，AI 就能帮你做。</div>';
+        '说清你要的<span class="accent">『效果』</span>，AI 就能帮你做。</div>';
       api.frag(qw);
       wrap.appendChild(qw);
 
-      /* ---- 轻预告（只签路标、不剧透） ---- */
+      // 轻预告（只签路标、不剧透）
       var tease = el('div', 'c-undo-tease');
       tease.innerHTML =
-        '这三颗药背后的门道——比如 <b>reset</b> 「丢掉」的提交是不是真的没了——' +
-        '还有传说中的<b>第四颗药</b>，等我们讲完核心概念再回来揭晓 👀';
+        '<b>reset</b> 为什么能把提交『退掉』、这些提交是不是真的没了——' +
+        '等讲完后面的内容，我们再回来揭晓 👀';
       api.frag(tease);
       wrap.appendChild(tease);
 
-      api.onReset(function () {
-        activeKey = null;
-        colObjs.forEach(function (o) { o.col.classList.remove('active'); resetCol(o); });
-      });
+      api.onReset(function () {});
     }
   });
 

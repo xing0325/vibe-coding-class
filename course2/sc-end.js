@@ -77,7 +77,7 @@
   }
 
   register({
-    chapter: 11,
+    chapter: 7,
     chapterName: '结语',
     id: 'ending',
     title: '你已经会用 Git 了',

@@ -39,14 +39,14 @@
     { n: 1,  name: '为什么需要 Git',  blurb: '没有它的那些深夜，到底有多痛。',       target: 1,  accent: 'main'   },
     { n: 2,  name: 'Commit',          blurb: '把"现在这一刻"稳稳地存下来。',         target: 2,  accent: 'teal'   },
     { n: 3,  name: '本地 / 远端',      blurb: '你电脑里的，和云上那份，是怎么对上的。', target: 3,  accent: 'teal'   },
-    { n: 4,  name: '三颗后悔药',       blurb: '手滑了？先学怎么把日子倒回去。',       target: 4,  accent: 'git'    },
+    { n: 4,  name: '后悔药',          blurb: '手滑了？先学怎么把日子倒回去。',       target: 4,  accent: 'git'    },
     { n: 5,  name: '分支',            blurb: '同一个项目，开几条平行的路一起走。',     target: 5,  accent: 'git'    },
-    { n: 6,  name: '指针与 HEAD',      blurb: '搞清楚"你现在到底站在哪一格"。',       target: 6,  accent: 'purple' },
-    { n: 7,  name: '后悔药·原理',      blurb: '回头看：那三颗药为什么真的灵。',       target: 7,  accent: 'amber'  },
-    { n: 8,  name: 'git diff',        blurb: '一眼看出这次到底改了哪几行。',         target: 8,  accent: 'teal'   },
-    { n: 9,  name: '多人协作',         blurb: '一群人改同一个项目，怎么不打架。',     target: 9,  accent: 'git'    },
-    { n: 10, name: 'worktree',        blurb: '同时摊开好几个工作台，互不干扰。',     target: 10, accent: 'purple' },
-    { n: '✓', name: '结尾',           blurb: '收个尾，看看你都拿下了什么。',         target: 11, accent: 'main', end: true }
+    { n: 6,  name: '指针与 HEAD',      blurb: '即将上线 · 先看看路线图。',           target: 6,  accent: 'purple', soon: true },
+    { n: 7,  name: '后悔药·原理',      blurb: '即将上线 · 先看看路线图。',           target: 6,  accent: 'amber',  soon: true },
+    { n: 8,  name: 'git diff',        blurb: '即将上线 · 先看看路线图。',           target: 6,  accent: 'teal',   soon: true },
+    { n: 9,  name: '多人协作',         blurb: '即将上线 · 先看看路线图。',           target: 6,  accent: 'git',    soon: true },
+    { n: 10, name: 'worktree',        blurb: '即将上线 · 先看看路线图。',           target: 6,  accent: 'purple', soon: true },
+    { n: '✓', name: '结尾',           blurb: '收个尾，看看你都拿下了什么。',         target: 7,  accent: 'main', end: true }
   ];
 
   var ACCENT_VAR = {

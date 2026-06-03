@@ -220,9 +220,13 @@ body{
 
 .cg-pill{
   font-family:var(--font-mono);font-size:12px;font-weight:700;
+  transition:transform .4s var(--ease),opacity .4s var(--ease);
 }
 .cg-pill rect{transition:all .35s var(--ease)}
 .cg-pill text{dominant-baseline:central;text-anchor:middle}
+/* 分支标签 = 指针：短引线 + 小箭头指向分支头 commit，强调"分支是一个指针" */
+.cg-pill .lead{fill:none;stroke-width:1.8;opacity:.9;transition:all .35s var(--ease)}
+.cg-pill .arrow{transition:all .35s var(--ease)}
 
 .cg-head{transition:transform .4s var(--ease),opacity .4s}
 .cg-head rect{fill:var(--git);rx:4}
@@ -503,6 +507,7 @@ CommitGraph.prototype._reset = function(){
   this.detached = false;
   // ---- bare ("裸线") mode state ----
   this.bare = false;     // true => no branch pills, no HEAD flag, single colour, flat line
+  this.showHead = false; // HEAD 旗默认不画（知识锁：HEAD 概念后面章节才讲）；init({head:true}) 才开
   this.showHashes = false;
   this.hereId = null;    // commit id wearing the plain "你在这" marker (not HEAD)
   this.gEdges.innerHTML='';
@@ -536,13 +541,13 @@ CommitGraph.prototype.init = function(branchName, ids, opts){
   opts = opts || {};
   this.bare = !!opts.bare;
   this.showHashes = !!opts.hashes;
+  this.showHead = !!opts.head;   // 知识锁：HEAD 旗默认不画，只有显式 {head:true} 才显示（留给后面的 HEAD 章）
 
   // 知识锁：bare 裸线模式下，分离态警告条(含 "HEAD" 字样)绝不能出现在 DOM 里——
   // 前 4 章还没讲 HEAD/分离态。彻底清空文字 + 移出布局；完整模式恢复。
-  if(this.banner){
-    if(this.bare){ this.banner.style.display='none'; this.banner.textContent=''; this.banner.classList.remove('show'); }
-    else { this.banner.style.display=''; if(!this.banner.textContent){ this.banner.textContent='⚠ HEAD 处于分离态 (detached HEAD) — 此处的提交无分支收留'; } }
-  }
+  // 知识锁：分离态 banner（含 "HEAD"/"分离" 字样）默认彻底清空 + 移出布局，
+  // 不论 bare/完整模式。只有真正进入分离态时(render 里)才填文字——前面章节不会触发。
+  if(this.banner){ this.banner.style.display='none'; this.banner.textContent=''; this.banner.classList.remove('show'); }
 
   // bare mode: one unified colour (git orange) for every node; otherwise per-branch
   var color = this.bare ? (opts.color || BARE_COLOR)
@@ -582,12 +587,21 @@ CommitGraph.prototype.markHere = function(id){
 CommitGraph.prototype._createCommit = function(id, branchName, parents, o){
   o = o||{};
   var b = this.branches[branchName];
-  // commit index = number of commits already on this lane (chain length on lane)
-  var laneCommits = this.order.filter(function(cid){return this.commits[cid].lane===b.lane;}, this);
+  parents = parents||[];
+  // ⭐ x 列号 = 拓扑深度（沿父链到根的距离）。后代永远画在父的右边。
+  //   根/init 的第一个 commit 没有父 -> index 0。
+  //   commit.index = max(父.index) + 1。merge 取两父中更深的一个 +1。
+  //   这保证从 d 建 feature 后 addCommit('feature','e') 时 e.index = d.index+1，
+  //   落在 d 右边一列，而不是回到 x=0 和 a 同列（这正是上一版的 bug）。
+  var idx = 0;
+  for(var pi=0; pi<parents.length; pi++){
+    var pc=this.commits[parents[pi]];
+    if(pc && pc.index!=null) idx = Math.max(idx, pc.index+1);
+  }
   var commit = {
     id:id, branch:branchName, lane:b.lane, color:b.color,
-    parents:parents||[], ghost:false,
-    index: laneCommits.length // position along the lane
+    parents:parents, ghost:false,
+    index: idx // 拓扑深度（父列+1），决定横向 x 列
   };
   this.commits[id]=commit;
   this.order.push(id);
@@ -725,9 +739,15 @@ CommitGraph.prototype._render = function(animate){
   var H=this._laneY(maxLane)+90;
   this.svg.setAttribute('viewBox','0 0 '+Math.max(W,300)+' '+Math.max(H,200));
 
-  // detached visuals
-  if(this.detached){ this.svg.classList.add('detached'); this.banner.classList.add('show'); }
-  else { this.svg.classList.remove('detached'); this.banner.classList.remove('show'); }
+  // detached visuals — banner 文字只在真分离态时存在(前面章节永不触发)
+  if(this.detached){
+    this.svg.classList.add('detached');
+    this.banner.textContent='⚠ HEAD 处于分离态 (detached HEAD) — 此处的提交无分支收留';
+    this.banner.style.display=''; this.banner.classList.add('show');
+  } else {
+    this.svg.classList.remove('detached');
+    this.banner.classList.remove('show'); this.banner.textContent=''; this.banner.style.display='none';
+  }
 
   // ---- EDGES ----
   this.gEdges.innerHTML='';
@@ -779,9 +799,14 @@ CommitGraph.prototype._render = function(animate){
     self.gNodes.appendChild(g);
   });
 
-  // ---- BRANCH PILLS ----  (skipped entirely in bare mode)
+  // ---- BRANCH LABELS = POINTERS ----  (skipped entirely in bare mode)
+  // 每个分支标签牌画成"指针"：标签牌上方/旁边，一条短引线 + 小箭头戳向
+  // 它所指的分支头 commit，强调"分支只是一个指向某 commit 的指针"。
+  // main 标签指向 main 的头（如 d），feature 标签指向 feature 的头（如 f）。
   this.gLabels.innerHTML='';
   if(!this.bare){
+  // 同一 commit 上若挂多个分支头，错开标签高度，避免叠在一起
+  var labelStack={};
   Object.keys(this.branches).forEach(function(bn){
     var b=self.branches[bn];
     var hc=self.commits[b.head];
@@ -790,12 +815,32 @@ CommitGraph.prototype._render = function(animate){
       hc=self.commits[b.base];
     }
     if(!hc) return;
-    var x=self._colX(hc.index)+30, y=self._laneY(hc.lane)-30;
+    var nx=self._colX(hc.index), ny=self._laneY(hc.lane);
     var g=svgEl('g',{'class':'cg-pill'});
-    var w=bn.length*8+18;
-    var rect=svgEl('rect',{'x':x,'y':y-12,'width':w,'height':22,'rx':7,
-      'fill':'rgba(13,17,23,.85)','stroke':b.color,'stroke-width':1.6});
-    var txt=svgEl('text',{'x':x+w/2,'y':y,'fill':b.color}); txt.textContent=bn;
+
+    var w=bn.length*8+20, h=22;
+    // 标签牌放在分支头右上方；同 commit 多分支头则逐个上移
+    var key=hc.index+'_'+hc.lane;
+    var stack=labelStack[key]||0; labelStack[key]=stack+1;
+    var px=nx+34;                 // 牌左边缘 x
+    var py=ny-34 - stack*30;      // 牌中心 y
+    var rect=svgEl('rect',{'x':px,'y':py-h/2,'width':w,'height':h,'rx':7,
+      'fill':'rgba(13,17,23,.9)','stroke':b.color,'stroke-width':1.6});
+    var txt=svgEl('text',{'x':px+w/2,'y':py,'fill':b.color}); txt.textContent=bn;
+
+    // 引线：从牌的左下角拐到分支头 commit 上沿；末端一个小箭头戳向节点
+    var startX=px, startY=py+h/2;          // 牌左下角
+    var endX=nx, endY=ny-17;               // 节点上沿（半径 17）
+    var midX=(startX+endX)/2;
+    var lead='M'+startX+','+startY+' C'+midX+','+startY+' '+(endX)+','+((startY+endY)/2)+' '+endX+','+endY;
+    var leadPath=svgEl('path',{'class':'lead','d':lead,'stroke':b.color});
+    g.appendChild(leadPath);
+    // 箭头：指向节点（向下/向左戳）
+    var ah=5;
+    var arrow=svgEl('path',{'class':'arrow','fill':b.color,
+      'd':'M'+endX+','+endY+' l'+(-ah)+','+(-ah*1.4)+' l'+(ah*2)+',0 z'});
+    g.appendChild(arrow);
+
     g.appendChild(rect); g.appendChild(txt);
     self.gLabels.appendChild(g);
   });
@@ -825,6 +870,8 @@ CommitGraph.prototype._render = function(animate){
     return;
   }
   // ---- full mode: HEAD flag ----
+  // 知识锁：HEAD 旗只在 showHead 显式开启时才画（分支章/前面章节不显示 HEAD）。
+  if(!this.showHead) return;
   var headCommit=null;
   if(this.head.type==='branch'){
     var b=this.branches[this.head.ref];
